@@ -15,9 +15,18 @@ export function Providers({ children }: ProvidersProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000,
+            // staleTime: 0 means data is immediately stale and refetched on
+            // mount. For a multi-page app where the user frequently toggles
+            // between Events / TimeCapsules / Chat / Members, this prevents
+            // the "ghost empty state" bug where the user just created a
+            // family but the cache still shows the previous (empty) result.
+            // Per-hook overrides (e.g. static lookups) can opt back into a
+            // longer staleTime where it makes sense.
+            staleTime: 0,
+            gcTime: 5 * 60 * 1000,
             retry: 1,
             refetchOnWindowFocus: false,
+            refetchOnReconnect: true,
           },
         },
       })

@@ -30,7 +30,10 @@ export function useFamilies(): UseQueryResult<FamilyWithRole[], Error> {
   return useQuery<FamilyWithRole[], Error>({
     queryKey: [...FAMILY_KEY, 'list'],
     queryFn: () => familyApi.listFamilies(),
-    staleTime: 60 * 1000,
+    // Always refetch on mount so navigating back to the families list — after
+    // creating / joining a family on another page — shows the latest data
+    // instead of the previously cached (often empty) snapshot.
+    refetchOnMount: 'always',
   });
 }
 
@@ -38,7 +41,7 @@ export function useFamiliesRaw(): UseQueryResult<FamilyListResponse, Error> {
   return useQuery<FamilyListResponse, Error>({
     queryKey: [...FAMILY_KEY, 'list', 'raw'],
     queryFn: () => familyApi.list(),
-    staleTime: 60 * 1000,
+    refetchOnMount: 'always',
   });
 }
 
@@ -49,6 +52,7 @@ export function useFamily(
     queryKey: [...FAMILY_KEY, 'detail', id],
     queryFn: () => familyApi.get(id ?? ''),
     enabled: Boolean(id),
+    refetchOnMount: 'always',
   });
 }
 
@@ -59,6 +63,8 @@ export function useFamilyTree(
     queryKey: [...FAMILY_KEY, familyId, 'tree'],
     queryFn: () => familyApi.getTree(familyId ?? ''),
     enabled: Boolean(familyId),
+    // Tree is read-mostly and expensive to compute; keep it a bit longer than
+    // the global default so navigating back doesn't recompute immediately.
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -71,6 +77,7 @@ export function useFamilyMembers(
     queryKey: [...FAMILY_KEY, familyId, 'members', params ?? {}],
     queryFn: () => memberApi.list(familyId ?? '', params),
     enabled: Boolean(familyId),
+    refetchOnMount: 'always',
   });
 }
 
@@ -81,6 +88,7 @@ export function useFamilyRelationships(
     queryKey: [...FAMILY_KEY, familyId, 'relationships'],
     queryFn: () => familyApi.relationships(familyId ?? ''),
     enabled: Boolean(familyId),
+    refetchOnMount: 'always',
   });
 }
 
@@ -93,7 +101,11 @@ export function useCreateFamily(): UseMutationResult<
   return useMutation<FamilyResponse, Error, CreateFamilyRequest>({
     mutationFn: (payload) => familyApi.create(payload),
     onSuccess: () => {
+      // Both invalidate AND refetch immediately so any open menu / sidebar
+      // hook sees the new family on the very next render — without waiting
+      // for a re-navigation.
       queryClient.invalidateQueries({ queryKey: FAMILY_KEY });
+      queryClient.refetchQueries({ queryKey: FAMILY_KEY, type: 'active' });
     },
   });
 }
@@ -113,6 +125,7 @@ export function useUpdateFamily(): UseMutationResult<
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: FAMILY_KEY });
       queryClient.invalidateQueries({ queryKey: [...FAMILY_KEY, 'detail', id] });
+      queryClient.refetchQueries({ queryKey: FAMILY_KEY, type: 'active' });
     },
   });
 }
@@ -127,6 +140,7 @@ export function useDeleteFamily(): UseMutationResult<
     mutationFn: () => Promise.reject(new Error('Not implemented by backend')),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FAMILY_KEY });
+      queryClient.refetchQueries({ queryKey: FAMILY_KEY, type: 'active' });
     },
   });
 }
@@ -141,6 +155,7 @@ export function useJoinFamily(): UseMutationResult<
     mutationFn: (payload) => familyApi.join(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FAMILY_KEY });
+      queryClient.refetchQueries({ queryKey: FAMILY_KEY, type: 'active' });
     },
   });
 }
