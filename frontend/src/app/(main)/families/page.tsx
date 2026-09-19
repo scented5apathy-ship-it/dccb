@@ -28,6 +28,10 @@ type JoinValues = z.infer<typeof joinSchema>;
 export default function FamiliesPage() {
   const router = useRouter();
   const { data: families, isLoading, isError, error, refetch } = useFamilies();
+  // Defensive: even with `Array.isArray` guards in the hook, a stale cache
+  // (or an old build still in the browser tab) could hand us a non-array.
+  // Coerce here so `.map()` never throws.
+  const familiesList = Array.isArray(families) ? families : [];
   const [joinOpen, setJoinOpen] = useState(false);
 
   return (
@@ -72,7 +76,7 @@ export default function FamiliesPage() {
             Thử lại
           </Button>
         </div>
-      ) : !families || families.length === 0 ? (
+      ) : !familiesList || familiesList.length === 0 ? (
         <EmptyState
           icon={<Users className="h-10 w-10" />}
           title="Bạn chưa tham gia gia đình nào"
@@ -96,7 +100,7 @@ export default function FamiliesPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {families.map((f) => (
+          {familiesList.map((f) => (
             <FamilyCard key={f.family.id} family={f.family} />
           ))}
         </div>

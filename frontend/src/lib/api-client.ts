@@ -137,7 +137,15 @@ export const familyApi = {
   listFamilies: (): Promise<FamilyWithRole[]> =>
     apiClient
       .get<FamilyListResponse>('/families')
-      .then((r) => r.data.families ?? []),
+      .then((r) => {
+        // Defensive: the backend always returns { families: [...] }, but if the
+        // shape ever changes (or the request fails partway through and r.data
+        // is something else), don't crash the consumer — coerce to []. Without
+        // this, callers like `families.map(...)` blow up with
+        // "families.map is not a function".
+        const families = (r.data as Partial<FamilyListResponse> | undefined)?.families;
+        return Array.isArray(families) ? families : [];
+      }),
   get: (id: string): Promise<FamilyDetail> =>
     apiClient.get<FamilyDetail>(`/families/${id}`).then((r) => r.data),
   create: (payload: CreateFamilyRequest): Promise<FamilyResponse> =>
@@ -200,6 +208,26 @@ export const memberApi = {
       .then((r) => r.data),
   delete: (id: string): Promise<MessageResponse> =>
     apiClient.delete<MessageResponse>(`/members/${id}`).then((r) => r.data),
+  updateRole: (
+    familyId: string,
+    memberId: string,
+    role: 'ADMIN' | 'EDITOR' | 'VIEWER'
+  ): Promise<MemberResponse> =>
+    apiClient
+      .put<MemberResponse>(
+        `/families/${familyId}/members/${memberId}/role`,
+        { role }
+      )
+      .then((r) => r.data),
+  getRole: (
+    familyId: string,
+    memberId: string
+  ): Promise<{ role: string | null }> =>
+    apiClient
+      .get<{ role: string | null }>(
+        `/families/${familyId}/members/${memberId}/role`
+      )
+      .then((r) => r.data),
   createInvitation: (
     familyId: string,
     payload: CreateInvitationRequest
