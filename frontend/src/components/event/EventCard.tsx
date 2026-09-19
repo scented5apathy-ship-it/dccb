@@ -35,14 +35,18 @@ const typeVariant: Record<
   OTHER: 'default',
 };
 
-export function EventCard({ entry, familyId }: EventCardProps) {
+export function EventCard({ entry }: EventCardProps) {
   const e = entry.event;
-  const href = familyId ? `/families/${familyId}/events` : `/events`;
+  // Detail page lives at `/events/{id}` (global route, exists in
+  // frontend/src/app/(main)/events/[id]/page.tsx). The previous code
+  // tried to build `/families/{familyId}/events/{eventId}` which 404'd
+  // because that route doesn't exist.
+  const href = `/events/${e.id}`;
   const start = new Date(e.eventDate);
   const isPast = start.getTime() < Date.now();
 
   return (
-    <Link href={`${href}/${e.id}`} className="group block">
+    <Link href={href} className="group block">
       <Card hoverable padding="none" className="overflow-hidden">
         <div className="relative aspect-[16/9] w-full bg-gradient-to-br from-primary-100 to-accent-100">
           {e.coverImageUrl ? (

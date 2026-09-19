@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Filter, Clock } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Filter, Clock, Home } from 'lucide-react';
 import { familyApi } from '@/lib/api-client';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -49,23 +50,31 @@ export default function TimeCapsulesPage() {
 
   const familyId = familiesQuery.data?.families?.[0]?.family?.id;
 
+  // Always fetch the unfiltered list so the filter chips can show
+  // accurate counts for every status at the same time.
+  const allCapsulesQuery = useTimeCapsules(familyId);
   const capsulesQuery = useTimeCapsules(familyId, {
     status: statusFilter,
   });
 
   const deleteMutation = useDeleteTimeCapsule();
 
+  // Counts come from the unfiltered list so every chip shows the right number.
+  const allEntries = allCapsulesQuery.data?.capsules ?? [];
   const entries = capsulesQuery.data?.capsules ?? [];
 
   const counts = useMemo(() => {
-    const all = entries;
     return {
-      total: all.length,
-      sealed: all.filter((e) => !e.capsule.isOpened && !e.isUnlockable).length,
-      available: all.filter((e) => !e.capsule.isOpened && e.isUnlockable).length,
-      opened: all.filter((e) => e.capsule.isOpened).length,
+      total: allEntries.length,
+      sealed: allEntries.filter(
+        (e) => !e.capsule.isOpened && !e.isUnlockable
+      ).length,
+      available: allEntries.filter(
+        (e) => !e.capsule.isOpened && e.isUnlockable
+      ).length,
+      opened: allEntries.filter((e) => e.capsule.isOpened).length,
     };
-  }, [entries]);
+  }, [allEntries]);
 
   return (
     <div className="space-y-6">
@@ -80,13 +89,20 @@ export default function TimeCapsulesPage() {
             biệt trong tương lai.
           </p>
         </div>
-        <Button
-          leftIcon={<Plus className="h-4 w-4" />}
-          onClick={() => setCreateOpen(true)}
-          disabled={!familyId}
-        >
-          Tạo hộp thời gian
-        </Button>
+        {familyId ? (
+          <Button
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setCreateOpen(true)}
+          >
+            Tạo hộp thời gian
+          </Button>
+        ) : (
+          <Link href="/families/new">
+            <Button leftIcon={<Home className="h-4 w-4" />} variant="outline">
+              Tạo gia đình để bắt đầu
+            </Button>
+          </Link>
+        )}
       </header>
 
       <Card padding="sm">
@@ -131,6 +147,13 @@ export default function TimeCapsulesPage() {
           icon={<Clock className="h-8 w-8" />}
           title="Chưa có gia đình nào"
           description="Hãy tạo hoặc tham gia một gia đình trước khi niêm phong hộp thời gian."
+          action={
+            <Link href="/families/new">
+              <Button leftIcon={<Home className="h-4 w-4" />}>
+                Tạo gia đình
+              </Button>
+            </Link>
+          }
         />
       )}
 
@@ -163,14 +186,12 @@ export default function TimeCapsulesPage() {
       {entries.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {entries.map((entry) => (
-            <button
+            <TimeCapsuleCard
               key={entry.capsule.id}
-              type="button"
+              entry={entry}
+              familyId={familyId}
               onClick={() => setSelected(entry)}
-              className="text-left"
-            >
-              <TimeCapsuleCard entry={entry} />
-            </button>
+            />
           ))}
         </div>
       )}

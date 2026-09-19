@@ -138,7 +138,7 @@ export default function FamilyEventsPage({ params }: PageProps) {
       {entries.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {entries.map((entry) => (
-            <EventCard key={entry.event.id} entry={entry} familyId={familyId} />
+            <EventCard key={entry.event.id} entry={entry} />
           ))}
         </div>
       )}

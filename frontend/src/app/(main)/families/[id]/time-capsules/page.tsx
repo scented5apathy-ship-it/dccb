@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Clock, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -40,9 +40,25 @@ export default function FamilyTimeCapsulesPage({ params }: PageProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<TimeCapsuleEntry | null>(null);
 
+  // Always fetch the unfiltered list so filter chip counts are accurate.
+  const allCapsulesQuery = useTimeCapsules(familyId);
   const capsulesQuery = useTimeCapsules(familyId, { status: statusFilter });
   const deleteMutation = useDeleteTimeCapsule();
+  const allEntries = allCapsulesQuery.data?.capsules ?? [];
   const entries = capsulesQuery.data?.capsules ?? [];
+
+  const counts = useMemo(() => {
+    return {
+      total: allEntries.length,
+      sealed: allEntries.filter(
+        (e) => !e.capsule.isOpened && !e.isUnlockable
+      ).length,
+      available: allEntries.filter(
+        (e) => !e.capsule.isOpened && e.isUnlockable
+      ).length,
+      opened: allEntries.filter((e) => e.capsule.isOpened).length,
+    };
+  }, [allEntries]);
 
   return (
     <div className="space-y-6">
@@ -71,6 +87,14 @@ export default function FamilyTimeCapsulesPage({ params }: PageProps) {
           </span>
           {FILTER_OPTIONS.map((opt) => {
             const active = statusFilter === opt.value;
+            const count =
+              opt.value === undefined
+                ? counts.total
+                : opt.value === 'sealed'
+                  ? counts.sealed
+                  : opt.value === 'available'
+                    ? counts.available
+                    : counts.opened;
             return (
               <button
                 key={opt.label}
@@ -85,7 +109,7 @@ export default function FamilyTimeCapsulesPage({ params }: PageProps) {
               >
                 {opt.label}
                 <Badge variant="default" size="sm">
-                  {opt.value === statusFilter ? entries.length : ''}
+                  {count}
                 </Badge>
               </button>
             );
@@ -122,14 +146,12 @@ export default function FamilyTimeCapsulesPage({ params }: PageProps) {
       {entries.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {entries.map((entry) => (
-            <button
+            <TimeCapsuleCard
               key={entry.capsule.id}
-              type="button"
+              entry={entry}
+              familyId={familyId}
               onClick={() => setSelected(entry)}
-              className="text-left"
-            >
-              <TimeCapsuleCard entry={entry} familyId={familyId} />
-            </button>
+            />
           ))}
         </div>
       )}

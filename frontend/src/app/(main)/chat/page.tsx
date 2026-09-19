@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MessageCircle, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { MessageCircle, Plus, Home } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -46,8 +47,14 @@ export default function ChatPage() {
   const chats = chatsQuery.data?.chats ?? [];
 
   useEffect(() => {
-    if (!selectedChatId && chats[0]?.chat.id) {
-      setSelectedChatId(chats[0].chat.id);
+    // Auto-select the first chat only when the user hasn't picked anything
+    // AND the chat list just freshly changed (different first chat id).
+    // We also reset whenever the family context changes so we don't keep
+    // a chat from a different family selected.
+    if (!selectedChatId || !chats.find((c) => c.chat.id === selectedChatId)) {
+      if (chats[0]?.chat.id) {
+        setSelectedChatId(chats[0].chat.id);
+      }
     }
   }, [chats, selectedChatId]);
 
@@ -104,13 +111,20 @@ export default function ChatPage() {
               ))}
             </select>
           )}
-          <Button
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => setCreateOpen(true)}
-            disabled={!familyId}
-          >
-            Cuộc trò chuyện mới
-          </Button>
+          {familyId ? (
+            <Button
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => setCreateOpen(true)}
+            >
+              Cuộc trò chuyện mới
+            </Button>
+          ) : (
+            <Link href="/families/new">
+              <Button leftIcon={<Home className="h-4 w-4" />} variant="outline">
+                Tạo gia đình để bắt đầu
+              </Button>
+            </Link>
+          )}
         </div>
       </header>
 

@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Plus, Filter } from 'lucide-react';
+import Link from 'next/link';
+import { Calendar, Plus, Filter, Home } from 'lucide-react';
 import { familyApi } from '@/lib/api-client';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -68,13 +69,20 @@ export default function EventsPage() {
             Các sự kiện gia đình - đám cưới, tang lễ, sinh nhật, đoàn tụ.
           </p>
         </div>
-        <Button
-          leftIcon={<Plus className="h-4 w-4" />}
-          onClick={() => setCreateOpen(true)}
-          disabled={!familyId}
-        >
-          Tạo sự kiện
-        </Button>
+        {familyId ? (
+          <Button
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setCreateOpen(true)}
+          >
+            Tạo sự kiện
+          </Button>
+        ) : (
+          <Link href="/families/new">
+            <Button leftIcon={<Home className="h-4 w-4" />} variant="outline">
+              Tạo gia đình để bắt đầu
+            </Button>
+          </Link>
+        )}
       </header>
 
       <Card padding="sm">
@@ -127,6 +135,13 @@ export default function EventsPage() {
           icon={<Calendar className="h-8 w-8" />}
           title="Chưa có gia đình nào"
           description="Hãy tạo hoặc tham gia một gia đình trước khi thêm sự kiện."
+          action={
+            <Link href="/families/new">
+              <Button leftIcon={<Home className="h-4 w-4" />}>
+                Tạo gia đình
+              </Button>
+            </Link>
+          }
         />
       )}
 
