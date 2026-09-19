@@ -36,18 +36,23 @@ public class PhotoAlbumService {
         for (PhotoAlbum a : albums) {
             User creator = userRepository.findById(a.getCreatorId()).orElse(null);
             int photoCount = albumRepository.countPhotos(a.getId());
-            items.add(Map.of(
-                "album", a,
-                "creator", creator == null ? null : Map.of(
-                    "id", creator.getId(),
-                    "fullName", creator.getFullName(),
-                    "avatarUrl", creator.getAvatarUrl()
-                ),
-                "photoCount", photoCount,
-                "coverPhoto", a.getCoverPhotoUrl()
+            // Use a HashMap (not Map.of) so we can carry nullable fields like
+            // coverPhotoUrl — Map.of throws NPE on null values, which crashed
+            // the listing when any album had no cover photo set.
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("album", a);
+            item.put("creator", creator == null ? null : Map.of(
+                "id", creator.getId(),
+                "fullName", creator.getFullName(),
+                "avatarUrl", creator.getAvatarUrl()
             ));
+            item.put("photoCount", photoCount);
+            item.put("coverPhoto", a.getCoverPhotoUrl());
+            items.add(item);
         }
-        return Map.of("albums", items);
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("albums", items);
+        return result;
     }
 
     @Transactional

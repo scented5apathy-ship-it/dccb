@@ -44,7 +44,10 @@ export default function FamilyTimeCapsulesPage({ params }: PageProps) {
   const allCapsulesQuery = useTimeCapsules(familyId);
   const capsulesQuery = useTimeCapsules(familyId, { status: statusFilter });
   const deleteMutation = useDeleteTimeCapsule();
-  const allEntries = allCapsulesQuery.data?.capsules ?? [];
+  const allEntries = useMemo(
+    () => allCapsulesQuery.data?.capsules ?? [],
+    [allCapsulesQuery.data?.capsules]
+  );
   const entries = capsulesQuery.data?.capsules ?? [];
 
   const counts = useMemo(() => {

@@ -55,7 +55,10 @@ export default function InvitationsPage() {
   const [revokeTarget, setRevokeTarget] = useState<InvitationDetail | null>(null);
   const [qrInvite, setQrInvite] = useState<InvitationDetail | null>(null);
 
-  const allInvitations: InvitationDetail[] = data?.invitations ?? [];
+  const allInvitations: InvitationDetail[] = useMemo(
+    () => data?.invitations ?? [],
+    [data?.invitations]
+  );
 
   const filtered = useMemo(() => {
     return allInvitations.filter((inv) => {

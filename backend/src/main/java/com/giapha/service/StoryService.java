@@ -101,6 +101,11 @@ public class StoryService {
         }
 
         UUID storyId = storyRepository.insert(s);
+        // Stamp the generated id back onto the entity so the response payload
+        // (built from `s` below) carries it. Without this, the JSON returns
+        // a story without `id`, leaving the frontend with no handle to fetch
+        // / edit the freshly created record.
+        s.setId(storyId);
 
         List<StoryMedia> mediaList = new ArrayList<>();
         if (req.getMedia() != null) {

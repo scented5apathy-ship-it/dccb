@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { MessageCircle, Plus, Home } from 'lucide-react';
@@ -44,7 +44,13 @@ export default function ChatPage() {
   const messagesQuery = useChatMessages(selectedChatId);
   const createChat = useCreateChat();
 
-  const chats = chatsQuery.data?.chats ?? [];
+  // Memoize the chats array so the useEffect dependency is stable.
+  // Without this, a fresh array on every render makes the deps change on every
+  // render and triggers the exhaustive-deps lint warning.
+  const chats = useMemo(
+    () => chatsQuery.data?.chats ?? [],
+    [chatsQuery.data?.chats]
+  );
 
   useEffect(() => {
     // Auto-select the first chat only when the user hasn't picked anything

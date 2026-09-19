@@ -30,10 +30,22 @@ public class AuthorizationHelper {
     }
 
     public boolean isFamilyMember(UUID userId, UUID familyId) {
+        // A user is considered a family member if either:
+        //   (a) they have a row in family_members linked via user_id (someone they
+        //       personally represent in the tree), OR
+        //   (b) they are the family creator (families.created_by). The creator
+        //       has full administrative access even without a family_members row
+        //       — without this, the documented admin user would get 403 on every
+        //       family-scoped endpoint after fresh seed.
         Integer count = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM caygiaphaso.family_members " +
-            "WHERE family_id = ? AND user_id = ?",
-            Integer.class, familyId, userId
+            "SELECT (" +
+            "  SELECT COUNT(*) FROM caygiaphaso.family_members " +
+            "    WHERE family_id = ? AND user_id = ?" +
+            ") + (" +
+            "  SELECT COUNT(*) FROM caygiaphaso.families " +
+            "    WHERE id = ? AND created_by = ?" +
+            ")",
+            Integer.class, familyId, userId, familyId, userId
         );
         return count != null && count > 0;
     }

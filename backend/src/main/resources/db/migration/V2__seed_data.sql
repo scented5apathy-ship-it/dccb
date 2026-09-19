@@ -14,31 +14,31 @@ SET search_path = caygiaphaso, public;
 
 INSERT INTO users (id, email, password_hash, full_name, avatar_url, phone, bio, is_active, email_verified) VALUES
   ('11111111-1111-1111-1111-111111111111', 'admin@nguyen-family.vn',
-   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+   '$2a$10$2.NtTNis1dTejlWjPLAps.bjTk18p8VMJXEyb8KaY9Pifh0r/EsI6',
    'Nguyễn Văn An',  'https://i.pravatar.cc/300?u=an',
    '0901234567', 'Trưởng họ Nguyễn, đời thứ 5. Yêu thích nấu ăn truyền thống và lịch sử dòng tộc.',
    TRUE, TRUE),
 
   ('22222222-2222-2222-2222-222222222222', 'lan@nguyen-family.vn',
-   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+   '$2a$10$2.NtTNis1dTejlWjPLAps.bjTk18p8VMJXEyb8KaY9Pifh0r/EsI6',
    'Nguyễn Thị Lan', 'https://i.pravatar.cc/300?u=lan',
    '0912345678', 'Chuyên gia ẩm thực miền Bắc. Cháu nội cụ tổ Nguyễn Văn Hùng.',
    TRUE, TRUE),
 
   ('33333333-3333-3333-3333-333333333333', 'minh@nguyen-family.vn',
-   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+   '$2a$10$2.NtTNis1dTejlWjPLAps.bjTk18p8VMJXEyb8KaY9Pifh0r/EsI6',
    'Nguyễn Minh',    'https://i.pravatar.cc/300?u=minh',
    '0923456789', 'Kỹ sư phần mềm tại Hà Nội, thích tìm hiểu về nguồn gốc các món ăn gia đình.',
    TRUE, TRUE),
 
   ('44444444-4444-4444-4444-444444444444', 'hoa@tran-family.vn',
-   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+   '$2a$10$2.NtTNis1dTejlWjPLAps.bjTk18p8VMJXEyb8KaY9Pifh0r/EsI6',
    'Trần Thị Hoa',   'https://i.pravatar.cc/300?u=hoa',
    '0934567890', 'Giáo viên về hưu, người kể chuyện chính của gia tộc họ Trần.',
    TRUE, TRUE),
 
   ('55555555-5555-5555-5555-555555555555', 'tuan@le-family.vn',
-   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+   '$2a$10$2.NtTNis1dTejlWjPLAps.bjTk18p8VMJXEyb8KaY9Pifh0r/EsI6',
    'Lê Văn Tuấn',    'https://i.pravatar.cc/300?u=tuan',
    '0945678901', 'Bác sĩ nội khoa, con trai trưởng gia đình họ Lê.',
    TRUE, TRUE);

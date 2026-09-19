@@ -53,13 +53,13 @@ public class StoryRepository {
 
     public UUID insert(Story s) {
         UUID id = s.getId() != null ? s.getId() : UUID.randomUUID();
-        String memberArr = s.getRelatedMemberIds() == null || s.getRelatedMemberIds().isEmpty()
-            ? "{}" : toPgUuidArray(s.getRelatedMemberIds());
+        String memberArrLit = s.getRelatedMemberIds() == null || s.getRelatedMemberIds().isEmpty()
+            ? "'{}'" : "'" + toPgUuidArray(s.getRelatedMemberIds()) + "'";
         jdbc.update(
             "INSERT INTO caygiaphaso.stories " +
             "(id, family_id, author_id, title, content, story_date, story_location, " +
             " related_member_ids, related_generation_id, is_featured, view_count) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, " + memberArr + "::uuid[], ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, " + memberArrLit + "::uuid[], ?, ?, ?)",
             id, s.getFamilyId(), s.getAuthorId(), s.getTitle(), s.getContent(),
             s.getStoryDate(), s.getStoryLocation(),
             s.getRelatedGenerationId(), Boolean.TRUE.equals(s.getIsFeatured()), 0
@@ -76,11 +76,11 @@ public class StoryRepository {
     public void update(UUID id, String title, String content, java.time.LocalDate storyDate,
                        String storyLocation, UUID relatedGenerationId, Boolean isFeatured,
                        List<UUID> relatedMemberIds) {
-        String memberArr = relatedMemberIds == null || relatedMemberIds.isEmpty()
-            ? "{}" : toPgUuidArray(relatedMemberIds);
+        String memberArrLit = relatedMemberIds == null || relatedMemberIds.isEmpty()
+            ? "'{}'" : "'" + toPgUuidArray(relatedMemberIds) + "'";
         jdbc.update(
             "UPDATE caygiaphaso.stories SET title = ?, content = ?, story_date = ?, " +
-            "story_location = ?, related_member_ids = " + memberArr + "::uuid[], " +
+            "story_location = ?, related_member_ids = " + memberArrLit + "::uuid[], " +
             "related_generation_id = ?, is_featured = ? WHERE id = ?",
             title, content, storyDate, storyLocation,
             relatedGenerationId, Boolean.TRUE.equals(isFeatured), id

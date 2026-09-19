@@ -62,7 +62,10 @@ export default function TimeCapsulesPage() {
   const deleteMutation = useDeleteTimeCapsule();
 
   // Counts come from the unfiltered list so every chip shows the right number.
-  const allEntries = allCapsulesQuery.data?.capsules ?? [];
+  const allEntries = useMemo(
+    () => allCapsulesQuery.data?.capsules ?? [],
+    [allCapsulesQuery.data?.capsules]
+  );
   const entries = capsulesQuery.data?.capsules ?? [];
 
   const counts = useMemo(() => {

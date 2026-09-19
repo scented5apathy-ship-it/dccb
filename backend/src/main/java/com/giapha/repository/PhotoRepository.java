@@ -45,7 +45,7 @@ public class PhotoRepository {
                        LocalDate photoDate, String photoLocation, List<UUID> memberIds) {
         UUID id = UUID.randomUUID();
         String memberArr = memberIds == null || memberIds.isEmpty()
-            ? "{}" : toPgUuidArray(memberIds);
+            ? "'{}'" : "'" + toPgUuidArray(memberIds) + "'";
         jdbc.update(
             "INSERT INTO caygiaphaso.photos " +
             "(id, album_id, uploader_id, photo_url, caption, photo_date, photo_location, member_ids) " +
