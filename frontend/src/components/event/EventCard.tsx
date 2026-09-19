@@ -19,6 +19,7 @@ const typeLabel: Record<EventType, string> = {
   ANNIVERSARY: 'Kỷ niệm',
   REUNION: 'Đoàn tụ',
   HOLIDAY: 'Lễ hội',
+  RELIGIOUS: 'Lễ hội / Tôn giáo',
   OTHER: 'Khác',
 };
 
@@ -32,6 +33,7 @@ const typeVariant: Record<
   ANNIVERSARY: 'primary',
   REUNION: 'info',
   HOLIDAY: 'warning',
+  RELIGIOUS: 'warning',
   OTHER: 'default',
 };
 

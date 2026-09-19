@@ -7,7 +7,8 @@ export type EventType =
   | 'BIRTHDAY'
   | 'ANNIVERSARY'
   | 'REUNION'
-  | 'HOLIDAY'
+  | 'HOLIDAY'   // legacy alias kept for backward-compat; prefer RELIGIOUS
+  | 'RELIGIOUS'
   | 'OTHER';
 
 export type RsvpStatus = 'GOING' | 'MAYBE' | 'NOT_GOING' | 'PENDING';

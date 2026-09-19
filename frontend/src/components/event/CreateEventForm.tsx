@@ -28,7 +28,7 @@ const EVENT_TYPES: Array<{ value: EventType; label: string }> = [
   { value: 'BIRTHDAY', label: 'Sinh nhật' },
   { value: 'ANNIVERSARY', label: 'Kỷ niệm' },
   { value: 'REUNION', label: 'Đoàn tụ gia đình' },
-  { value: 'HOLIDAY', label: 'Lễ hội' },
+  { value: 'RELIGIOUS', label: 'Lễ hội / Tôn giáo' },
   { value: 'OTHER', label: 'Khác' },
 ];
 
@@ -63,6 +63,12 @@ export function CreateEventForm({ familyId, onSuccess }: CreateEventFormProps) {
   const onSubmit = handleSubmit(async (values) => {
     if (!values.eventDate) {
       showToast.error('Vui lòng chọn ngày diễn ra');
+      return;
+    }
+    // Guard against endDate < eventDate at the client too — the backend
+    // CHECK constraint would otherwise fail and bubble up as a 500.
+    if (values.endDate && new Date(values.endDate) < new Date(values.eventDate)) {
+      showToast.error('Ngày kết thúc phải sau hoặc bằng ngày bắt đầu');
       return;
     }
     const payload: CreateEventRequest = {
