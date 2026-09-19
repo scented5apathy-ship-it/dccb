@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -34,6 +35,22 @@ public class RelationshipService {
     private final FamilyMemberRepository memberRepository;
     private final FamilyRepository familyRepository;
     private final FamilyRoleResolver roleResolver;
+
+    /**
+     * List every relationship edge in a family. Authorizes by membership:
+     * non-members get a 403, family members see the full set. The repository
+     * already returns {@code Relationship} rows ordered by id ascending; the
+     * tree view at {@code GET /families/{id}/tree} re-computes its own nested
+     * shape, but this flat listing is what {@code useFamilyRelationships} (and
+     * any future graph editor) consumes.
+     */
+    @Transactional(readOnly = true)
+    public List<Relationship> list(UUID familyId, User user) {
+        if (roleResolver.resolveRole(familyId, user) == null) {
+            throw new ForbiddenException("Bạn không phải thành viên của gia tộc này");
+        }
+        return relationshipRepository.findAllForFamily(familyId);
+    }
 
     @Transactional
     public RelationshipDto create(CreateRelationshipRequest req, User user) {

@@ -10,6 +10,7 @@ import com.giapha.repository.*;
 import com.giapha.security.CurrentUser;
 import com.giapha.util.AuthorizationHelper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StoryService {
 
     private final StoryRepository storyRepository;
@@ -154,7 +156,11 @@ public class StoryService {
                     .relatedEntityType("STORY")
                     .relatedEntityId(storyId)
                     .build());
-            } catch (Exception ignore) {}
+            } catch (Exception ex) {
+            // Best-effort fanout — never block story creation on a notification
+            // failure. Log so SIT can diagnose a real bug in the notification path.
+            log.warn("notification fanout failed for story create (non-fatal)", ex);
+        }
         }
     }
 

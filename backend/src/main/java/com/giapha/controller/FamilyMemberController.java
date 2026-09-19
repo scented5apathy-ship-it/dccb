@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -122,7 +123,10 @@ public class FamilyMemberController {
             @PathVariable UUID memberId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         String role = memberService.resolveMemberRole(familyId, memberId, currentUser.getUser());
-        return ResponseEntity.ok(Map.of("role", role));
+        // Collections.singletonMap (not Map.of) because Map.of(K,V) rejects null values
+        // via Objects.requireNonNull, and a "pure genealogy entry" member has no
+        // linked user account — so role legitimately resolves to null here.
+        return ResponseEntity.ok(Collections.singletonMap("role", role));
     }
 
     @DeleteMapping("/members/{memberId}")

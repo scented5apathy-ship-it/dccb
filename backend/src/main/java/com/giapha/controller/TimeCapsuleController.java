@@ -30,6 +30,17 @@ public class TimeCapsuleController {
         return timeCapsuleService.create(familyId, req);
     }
 
+    /**
+     * Seal-screen preview for a single capsule. Returns metadata + creator/recipient
+     * names + unlock countdown, but never the sealed `content` — that only comes
+     * back from {@code POST /time-capsules/{id}/open} once the unlock conditions
+     * are satisfied.
+     */
+    @GetMapping("/time-capsules/{capsuleId}")
+    public Map<String, Object> get(@PathVariable UUID capsuleId) {
+        return timeCapsuleService.get(capsuleId);
+    }
+
     @PostMapping("/time-capsules/{capsuleId}/open")
     public Map<String, Object> open(@PathVariable UUID capsuleId) {
         return timeCapsuleService.open(capsuleId);

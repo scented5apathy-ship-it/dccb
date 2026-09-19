@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,6 +23,18 @@ import java.util.UUID;
 public class RelationshipController {
 
     private final RelationshipService relationshipService;
+
+    /**
+     * List every relationship edge in a family. Mirrors the front-end's
+     * {@code familyApi.relationships(familyId)} call shape: returns a flat
+     * JSON array (not wrapped in {@code {"relationships": [...]}}).
+     */
+    @GetMapping
+    public ResponseEntity<List<com.giapha.model.entity.Relationship>> listByFamily(
+            @RequestParam UUID familyId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ResponseEntity.ok(relationshipService.list(familyId, currentUser.getUser()));
+    }
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> create(

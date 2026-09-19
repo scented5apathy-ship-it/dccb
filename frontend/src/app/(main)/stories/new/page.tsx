@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -13,7 +13,19 @@ import { useFamilyMembers } from '@/hooks/useFamily';
 import { useCreateStory } from '@/hooks/useStories';
 import type { CreateStoryRequest } from '@/types/story';
 
+// Wrap the body in a Suspense boundary so `useSearchParams` (which Next.js
+// treats as opt-in to client-side rendering during pre-render) doesn't force
+// the whole route to bail out of static generation. Same shape as
+// (auth)/login/page.tsx.
 export default function NewStoryPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewStoryView />
+    </Suspense>
+  );
+}
+
+function NewStoryView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const presetFamilyId = searchParams.get('familyId');

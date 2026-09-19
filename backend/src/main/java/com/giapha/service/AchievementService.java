@@ -12,6 +12,7 @@ import com.giapha.repository.NotificationRepository;
 import com.giapha.security.CurrentUser;
 import com.giapha.util.AuthorizationHelper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AchievementService {
 
     private final AchievementRepository achievementRepository;
@@ -116,7 +118,12 @@ public class AchievementService {
                     .relatedEntityId(ach.getId())
                     .build());
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ex) {
+            // Notification fanout is best-effort — don't fail the achievement
+            // award just because the notification insert blew up. Log so SIT
+            // can spot real bugs in the fanout path.
+            log.warn("notification fanout failed for achievement award (non-fatal)", ex);
+        }
 
         return Map.of(
             "memberAchievement", result.memberAchievement(),

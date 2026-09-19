@@ -22,7 +22,6 @@ import type {
   Relationship,
   UpdateFamilyRequest,
 } from '@/types/family';
-import type { MessageResponse } from '@/types/api';
 
 const FAMILY_KEY = ['families'] as const;
 
@@ -125,21 +124,6 @@ export function useUpdateFamily(): UseMutationResult<
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: FAMILY_KEY });
       queryClient.invalidateQueries({ queryKey: [...FAMILY_KEY, 'detail', id] });
-      queryClient.refetchQueries({ queryKey: FAMILY_KEY, type: 'active' });
-    },
-  });
-}
-
-export function useDeleteFamily(): UseMutationResult<
-  MessageResponse,
-  Error,
-  string
-> {
-  const queryClient = useQueryClient();
-  return useMutation<MessageResponse, Error, string>({
-    mutationFn: () => Promise.reject(new Error('Not implemented by backend')),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: FAMILY_KEY });
       queryClient.refetchQueries({ queryKey: FAMILY_KEY, type: 'active' });
     },
   });

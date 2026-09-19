@@ -14,6 +14,7 @@ import com.giapha.repository.UserRepository;
 import com.giapha.security.CurrentUser;
 import com.giapha.util.AuthorizationHelper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TimeCapsuleService {
 
     private final TimeCapsuleRepository capsuleRepository;
@@ -59,6 +61,59 @@ public class TimeCapsuleService {
             items.add(item);
         }
         return Map.of("capsules", items);
+    }
+
+    /**
+     * Fetch a single capsule's "seal-screen" preview: metadata + creator + recipient +
+     * unlock countdown, but NOT the content (the content only comes back from
+     * {@link #open(UUID)} once the unlock conditions are satisfied). Mirrors the
+     * shape returned by {@link #list} so the frontend can reuse its parser.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> get(UUID capsuleId) {
+        TimeCapsule tc = capsuleRepository.findById(capsuleId)
+            .orElseThrow(() -> new ResourceNotFoundException("TimeCapsule", capsuleId.toString()));
+
+        UUID userId = currentUser.getCurrentUserId();
+        authz.requireFamilyMember(userId, tc.getFamilyId());
+
+        // Compute the same status / countdown fields as listWithStatus would.
+        String status = Boolean.TRUE.equals(tc.getIsOpened()) ? "OPENED"
+            : ("DATE".equals(tc.getUnlockCondition())
+                && tc.getUnlockDate() != null
+                && !tc.getUnlockDate().isAfter(LocalDate.now(ZoneOffset.UTC))) ? "AVAILABLE"
+            : "LOCKED";
+        Long daysUntilUnlock = ("DATE".equals(tc.getUnlockCondition()) && tc.getUnlockDate() != null)
+            ? (long) (tc.getUnlockDate().toEpochDay() - LocalDate.now(ZoneOffset.UTC).toEpochDay())
+            : null;
+
+        // Look up creator + recipient names via a single query each so the
+        // seal screen can render the names without an extra round-trip.
+        String creatorName = jdbc.queryForObject(
+            "SELECT full_name FROM caygiaphaso.users WHERE id = ?",
+            String.class, tc.getCreatorId());
+        String recipientName = null;
+        if (tc.getRecipientMemberId() != null) {
+            try {
+                recipientName = jdbc.queryForObject(
+                    "SELECT full_name FROM caygiaphaso.family_members WHERE id = ?",
+                    String.class, tc.getRecipientMemberId());
+            } catch (org.springframework.dao.EmptyResultDataAccessException ignored) {
+                // Recipient member was deleted — leave null in the response.
+            }
+        }
+
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("capsule", tc);
+        item.put("creator", Map.of("id", tc.getCreatorId(), "fullName", creatorName));
+        if (tc.getRecipientMemberId() != null) {
+            item.put("recipient", Map.of("id", tc.getRecipientMemberId(), "fullName", recipientName));
+        } else {
+            item.put("recipient", null);
+        }
+        item.put("daysUntilUnlock", daysUntilUnlock);
+        item.put("isUnlockable", "AVAILABLE".equals(status) || "OPENED".equals(status));
+        return item;
     }
 
     @Transactional
@@ -118,7 +173,11 @@ public class TimeCapsuleService {
                         .relatedEntityId(id)
                         .build());
                 }
-            } catch (Exception ignore) {}
+            } catch (Exception ex) {
+                // Best-effort fanout — never block capsule creation on a notification
+                // failure. Log so SIT can diagnose a real bug in the fanout path.
+                log.warn("notification fanout failed for time-capsule create (non-fatal)", ex);
+            }
         }
 
         TimeCapsule saved = capsuleRepository.findById(id).orElseThrow();
@@ -151,7 +210,12 @@ public class TimeCapsuleService {
                     "SELECT user_id FROM caygiaphaso.family_members WHERE id = ?",
                     UUID.class, tc.getRecipientMemberId());
                 isRecipient = userId.equals(recipientUserId);
-            } catch (Exception ignore) {}
+            } catch (Exception ex) {
+                // The recipient member either has no linked user_id (pure
+                // genealogy entry) or the row was deleted. Either way, fall
+                // back to "not the recipient" rather than failing the open.
+                log.warn("could not resolve time-capsule recipient user (non-fatal)", ex);
+            }
         }
 
         if (!isCreator && !isFamilyAdmin && !isRecipient) {

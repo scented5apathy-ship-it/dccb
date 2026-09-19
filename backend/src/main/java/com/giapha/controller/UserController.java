@@ -27,6 +27,17 @@ public class UserController {
     private final UserService userService;
     private final CurrentUser currentUser;
 
+    /**
+     * Resolve the authenticated user's own profile. This MUST be declared
+     * before the {@code /{id}} mapping so Spring routes the literal
+     * {@code /me} segment here instead of falling through to {@link #getById}
+     * — where the UUID converter would throw on "me" and surface a 500.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> me() {
+        return ResponseEntity.ok(userService.getById(currentUser.getCurrentUserId()));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<UserDto> getById(@PathVariable UUID id) {
         UserDto user = userService.getById(id);
