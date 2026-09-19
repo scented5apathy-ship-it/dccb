@@ -46,16 +46,18 @@ public class StoryService {
             int mediaCount = storyMediaRepository.countByStoryId(st.getId());
             List<StoryTag> tags = storyTagRepository.listByStoryId(st.getId());
             User author = userRepository.findById(st.getAuthorId()).orElse(null);
-            items.add(Map.of(
-                "story", st,
-                "author", author == null ? null : Map.of(
-                    "id", author.getId(),
-                    "fullName", author.getFullName(),
-                    "avatarUrl", author.getAvatarUrl()
-                ),
-                "mediaCount", mediaCount,
-                "tags", tags.stream().map(StoryTag::getName).toList()
+            // Use LinkedHashMap (not Map.of) so that null values — e.g. author
+            // for a deleted user — don't throw NullPointerException.
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("story", st);
+            item.put("author", author == null ? null : Map.of(
+                "id", author.getId(),
+                "fullName", author.getFullName(),
+                "avatarUrl", author.getAvatarUrl()
             ));
+            item.put("mediaCount", mediaCount);
+            item.put("tags", tags.stream().map(StoryTag::getName).toList());
+            items.add(item);
         }
 
         Map<String, Object> out = new LinkedHashMap<>();

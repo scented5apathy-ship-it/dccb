@@ -17,6 +17,8 @@ interface PageProps {
   params: { id: string };
 }
 
+type Tab = 'all' | 'upcoming' | 'past';
+
 const TYPE_OPTIONS: Array<{ value: string | undefined; label: string }> = [
   { value: undefined, label: 'Tất cả' },
   { value: 'WEDDING', label: 'Đám cưới' },
@@ -30,12 +32,13 @@ const TYPE_OPTIONS: Array<{ value: string | undefined; label: string }> = [
 
 export default function FamilyEventsPage({ params }: PageProps) {
   const familyId = params.id;
-  const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [tab, setTab] = useState<Tab>('upcoming');
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
   const [createOpen, setCreateOpen] = useState(false);
 
   const filters: ListEventsParams = {
     type: typeFilter,
+    // 'all' = no time filter
     upcoming: tab === 'upcoming' ? true : undefined,
     past: tab === 'past' ? true : undefined,
     size: 50,
@@ -67,7 +70,7 @@ export default function FamilyEventsPage({ params }: PageProps) {
             <Filter className="h-3.5 w-3.5" />
             Chế độ xem:
           </span>
-          {(['upcoming', 'past'] as const).map((t) => (
+          {(['all', 'upcoming', 'past'] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -79,7 +82,7 @@ export default function FamilyEventsPage({ params }: PageProps) {
                   : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
               )}
             >
-              {t === 'upcoming' ? 'Sắp tới' : 'Đã qua'}
+              {t === 'all' ? 'Tất cả' : t === 'upcoming' ? 'Sắp tới' : 'Đã qua'}
             </button>
           ))}
           <span className="ml-3 inline-flex items-center gap-1 text-xs text-neutral-500">
@@ -124,7 +127,9 @@ export default function FamilyEventsPage({ params }: PageProps) {
           title={
             tab === 'upcoming'
               ? 'Chưa có sự kiện sắp tới'
-              : 'Chưa có sự kiện đã qua'
+              : tab === 'past'
+                ? 'Chưa có sự kiện đã qua'
+                : 'Chưa có sự kiện nào'
           }
           description="Tạo sự kiện đầu tiên để bắt đầu lên kế hoạch."
           action={

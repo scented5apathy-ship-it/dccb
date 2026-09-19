@@ -32,6 +32,12 @@ const EVENT_TYPES: Array<{ value: EventType; label: string }> = [
   { value: 'OTHER', label: 'Khác' },
 ];
 
+function toLocalDateTimeInputValue(d: Date): string {
+  // Format Date as YYYY-MM-DDTHH:MM (no seconds, no timezone) for <input type="datetime-local">.
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function CreateEventForm({ familyId, onSuccess }: CreateEventFormProps) {
   const create = useCreateEvent();
   const {
@@ -43,7 +49,11 @@ export function CreateEventForm({ familyId, onSuccess }: CreateEventFormProps) {
       title: '',
       description: '',
       eventType: 'REUNION',
-      eventDate: '',
+      // Default eventDate to "now + 1 hour" so a freshly created event is
+      // guaranteed to land on the "Sắp tới" (Upcoming) tab instead of being
+      // silently filtered into "Đã qua" if the user submits without
+      // changing the date field.
+      eventDate: toLocalDateTimeInputValue(new Date(Date.now() + 60 * 60 * 1000)),
       endDate: '',
       location: '',
       coverImageUrl: '',

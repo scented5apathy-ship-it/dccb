@@ -39,14 +39,18 @@ public class ChatService {
             int memberCount = chatRepository.countMembers(c.getId());
             int unreadCount = chatMemberRepository.unreadCount(c.getId(), userId);
             Map<String, Object> last = chatRepository.lastMessage(c.getId());
-            items.add(Map.of(
-                "chat", c,
-                "memberCount", memberCount,
-                "lastMessage", last,
-                "unreadCount", unreadCount
-            ));
+            // Use LinkedHashMap (not Map.of) so that null values — e.g. lastMessage
+            // for a chat with no messages yet — don't throw NullPointerException.
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("chat", c);
+            item.put("memberCount", memberCount);
+            item.put("lastMessage", last);
+            item.put("unreadCount", unreadCount);
+            items.add(item);
         }
-        return Map.of("chats", items);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("chats", items);
+        return out;
     }
 
     @Transactional
@@ -108,15 +112,20 @@ public class ChatService {
         for (ChatMessage m : messages) {
             User sender = m.getSenderId() == null ? null : senders.get(m.getSenderId());
             ChatMessage reply = m.getReplyToMessageId() == null ? null : replies.get(m.getReplyToMessageId());
-            items.add(Map.of(
-                "message", m,
-                "sender", sender == null ? null : Map.of(
-                    "id", sender.getId(), "fullName", sender.getFullName(), "avatarUrl", sender.getAvatarUrl()
-                ),
-                "replyTo", reply
+            // Use LinkedHashMap (not Map.of) so that null values — e.g. sender
+            // for a deleted user, or replyTo when the parent was deleted — don't
+            // throw NullPointerException.
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("message", m);
+            item.put("sender", sender == null ? null : Map.of(
+                "id", sender.getId(), "fullName", sender.getFullName(), "avatarUrl", sender.getAvatarUrl()
             ));
+            item.put("replyTo", reply);
+            items.add(item);
         }
-        return Map.of("messages", items);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("messages", items);
+        return out;
     }
 
     @Transactional
