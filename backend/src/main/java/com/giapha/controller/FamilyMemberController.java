@@ -8,6 +8,7 @@ import com.giapha.model.dto.member.CreateMemberRequest;
 import com.giapha.model.dto.member.MemberDto;
 import com.giapha.model.dto.member.MemberWithRelationships;
 import com.giapha.model.dto.member.UpdateMemberRequest;
+import com.giapha.model.dto.member.UpdateMemberRoleRequest;
 import com.giapha.security.CustomUserDetails;
 import com.giapha.service.FamilyMemberService;
 import jakarta.validation.Valid;
@@ -102,6 +103,26 @@ public class FamilyMemberController {
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         MemberDto m = memberService.updateMember(memberId, req, currentUser.getUser());
         return ResponseEntity.ok(Map.of("member", m));
+    }
+
+    @PutMapping("/families/{familyId}/members/{memberId}/role")
+    public ResponseEntity<Map<String, Object>> updateMemberRole(
+            @PathVariable UUID familyId,
+            @PathVariable UUID memberId,
+            @Valid @RequestBody UpdateMemberRoleRequest req,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        MemberDto m = memberService.updateMemberRole(familyId, memberId,
+            req.getRole(), currentUser.getUser());
+        return ResponseEntity.ok(Map.of("member", m, "role", req.getRole()));
+    }
+
+    @GetMapping("/families/{familyId}/members/{memberId}/role")
+    public ResponseEntity<Map<String, Object>> getMemberRole(
+            @PathVariable UUID familyId,
+            @PathVariable UUID memberId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        String role = memberService.resolveMemberRole(familyId, memberId, currentUser.getUser());
+        return ResponseEntity.ok(Map.of("role", role));
     }
 
     @DeleteMapping("/members/{memberId}")

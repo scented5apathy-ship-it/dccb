@@ -110,6 +110,58 @@ public class FamilyInvitationRepository {
             INV_MAPPER, familyId);
     }
 
+    /**
+     * Find the latest accepted invitation for (familyId, email) — used as a
+     * backing store for member roles. Roles live on family_invitations, not
+     * family_members, so resolving a role is a simple "latest accepted role".
+     */
+    public Optional<FamilyInvitation> findLatestAcceptedForEmail(UUID familyId, String email) {
+        try {
+            FamilyInvitation r = jdbc.queryForObject(
+                "SELECT * FROM caygiaphaso.family_invitations " +
+                "WHERE family_id = ? AND LOWER(invitee_email) = LOWER(?) AND accepted_at IS NOT NULL " +
+                "ORDER BY accepted_at DESC LIMIT 1",
+                INV_MAPPER, familyId, email);
+            return Optional.ofNullable(r);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Upsert a synthetic accepted invitation row used purely to track the
+     * current role of a member whose role has been changed via the role
+     * management endpoint. Real invitations (created by {@link #insert}) are
+     * untouched — we only add or update a separate row when an ADMIN explicitly
+     * changes a member's role.
+     *
+     * <p>Distinguishing the rows: synthetic rows have an invite_code starting
+     * with the {@code ROLE-} prefix so list-invitations UI can hide them if
+     * desired.</p>
+     */
+    public void upsertAcceptedRole(UUID familyId, String email, FamilyRole role) {
+        Optional<FamilyInvitation> existing = findLatestAcceptedForEmail(familyId, email);
+        if (existing.isPresent()) {
+            jdbc.update(
+                "UPDATE caygiaphaso.family_invitations SET role = ? WHERE id = ?",
+                role.name(), existing.get().getId());
+            return;
+        }
+        UUID id = UUID.randomUUID();
+        String syntheticCode = "ROLE-" + UUID.randomUUID().toString()
+            .replace("-", "").substring(0, 12).toUpperCase();
+        // inviter_id is filled with the family creator (consistent with the
+        // existing data model — every invitation needs an inviter).
+        jdbc.update(
+            "INSERT INTO caygiaphaso.family_invitations " +
+            "(id, family_id, inviter_id, invitee_email, invite_code, role, " +
+            " expires_at, accepted_at, created_at) " +
+            "VALUES (?, ?, (SELECT created_by FROM caygiaphaso.families WHERE id = ?), " +
+            "        ?, ?, ?, NOW(), NOW(), NOW())",
+            id, familyId, familyId, email.toLowerCase(),
+            syntheticCode, role.name());
+    }
+
     /** Mark an invitation as revoked so it can no longer be used. */
     public void revoke(UUID id) {
         jdbc.update(

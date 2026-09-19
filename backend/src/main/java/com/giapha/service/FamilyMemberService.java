@@ -332,6 +332,68 @@ public class FamilyMemberService {
             .build();
     }
 
+    /**
+     * Update a member's effective role within the family. ADMIN-only. The
+     * creator's role cannot be changed (they are always ADMIN). Self-targeting
+     * is allowed but useless for a creator — for non-creator members, they
+     * cannot update their own role (must ask an ADMIN).
+     *
+     * <p>The role is stored as the latest accepted invitation row for the
+     * member's user email. We use the {@link FamilyInvitationRepository#upsertAcceptedRole}
+     * helper so we never have to migrate the schema.</p>
+     */
+    @Transactional
+    public MemberDto updateMemberRole(UUID familyId, UUID memberId, String rawRole, User user) {
+        if (!roleResolver.isCreator(familyId, user.getId())) {
+            throw new ForbiddenException("Chỉ quản trị viên mới có thể đổi vai trò thành viên");
+        }
+        FamilyMember member = memberRepository.findById(memberId)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thành viên"));
+        if (!member.getFamilyId().equals(familyId)) {
+            throw new BadRequestException("Thành viên không thuộc gia đình này");
+        }
+        // The family creator is always ADMIN — refuse to change their role.
+        if (member.getUserId() != null
+                && roleResolver.isCreator(familyId, member.getUserId())) {
+            throw new BadRequestException(
+                "Không thể thay đổi vai trò của người tạo gia đình");
+        }
+        // The member must be linked to a system user so we know which email to
+        // store the role against. A pure genealogy entry without a user_id
+        // doesn't have a role in the permission system.
+        if (member.getUserId() == null) {
+            throw new BadRequestException(
+                "Thành viên này chưa liên kết với tài khoản người dùng");
+        }
+        FamilyRole newRole = roleResolver.parseRoleOrDefault(rawRole);
+        String email = userRepository.findById(member.getUserId())
+            .map(User::getEmail)
+            .orElseThrow(() -> new BadRequestException(
+                "Không tìm thấy email của thành viên"));
+        invitationRepository.upsertAcceptedRole(familyId, email, newRole);
+        log.info("Member {} role updated to {} in family {} by user {}",
+            memberId, newRole, familyId, user.getId());
+        return MemberDto.from(member);
+    }
+
+    /**
+     * Resolve the effective role a member has in a family. Used by the UI to
+     * show "Vai trò" badges in the members list. The creator is always ADMIN;
+     * everyone else picks up the latest accepted invitation role (defaulting
+     * to MEMBER when no accepted invitation exists).
+     */
+    public String resolveMemberRole(UUID familyId, UUID memberId, User user) {
+        FamilyMember member = memberRepository.findById(memberId)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thành viên"));
+        if (roleResolver.resolveRole(familyId, user) == null) {
+            throw new ForbiddenException(
+                "Bạn không có quyền xem vai trò của thành viên này");
+        }
+        if (member.getUserId() == null) return null; // pure genealogy entry
+        return roleResolver.resolveRole(familyId, member.getUserId(),
+            userRepository.findById(member.getUserId()).map(User::getEmail).orElse(null));
+    }
+
     // ------------------------------------------------------------------ //
     // Invitations
     // ------------------------------------------------------------------ //
@@ -343,6 +405,32 @@ public class FamilyMemberService {
         if (!roleResolver.isCreator(familyId, user.getId())) {
             throw new ForbiddenException("Chỉ quản trị viên mới có thể tạo lời mời");
         }
+
+        String email = req.getInviteeEmail() == null ? "" : req.getInviteeEmail().trim().toLowerCase();
+        if (email.isBlank()) {
+            throw new BadRequestException("Email người được mời là bắt buộc");
+        }
+
+        // Prevent inviting someone who's already a member of this family.
+        // Lookup-by-email first; if the email belongs to a registered user
+        // AND that user is already linked to this family via family_members,
+        // reject. (We don't reject emails that simply aren't registered yet —
+        // that's fine, the user can register later and use the code.)
+        userRepository.findByEmail(email).ifPresent(existing -> {
+            if (memberRepository.findByUserAndFamily(existing.getId(), familyId).isPresent()) {
+                throw new BadRequestException("Người dùng này đã là thành viên của gia đình");
+            }
+        });
+
+        // Don't allow inviting the family creator with a different role — the
+        // creator is always ADMIN. Self-invite-to-downgrade was a previous
+        // exploit; guard against it explicitly.
+        userRepository.findByEmail(email).ifPresent(existing -> {
+            if (roleResolver.isCreator(familyId, existing.getId())) {
+                throw new BadRequestException(
+                    "Không thể mời người tạo gia đình với vai trò khác");
+            }
+        });
 
         FamilyRole role = roleResolver.parseRoleOrDefault(req.getRole());
 
