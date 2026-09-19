@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
@@ -21,6 +21,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
+import { Modal } from '@/components/ui/Modal';
+import { QrCode, downloadNodeAsPng, downloadQrPng } from '@/components/ui/QrCode';
+import { Download, ImageDown } from 'lucide-react';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -50,6 +53,7 @@ export default function InvitationsPage() {
   const [search, setSearch] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<InvitationDetail | null>(null);
+  const [qrInvite, setQrInvite] = useState<InvitationDetail | null>(null);
 
   const allInvitations: InvitationDetail[] = data?.invitations ?? [];
 
@@ -221,6 +225,7 @@ export default function InvitationsPage() {
               copied={copiedId === inv.id}
               onCopy={(text) => handleCopy(text, inv.id)}
               onRevoke={() => setRevokeTarget(inv)}
+              onQr={() => setQrInvite(inv)}
             />
           ))}
         </div>
@@ -242,7 +247,213 @@ export default function InvitationsPage() {
         variant="danger"
         loading={revokeMutation.isPending}
       />
+
+      <QrPopup
+        invite={qrInvite}
+        onClose={() => setQrInvite(null)}
+        familyName={familyData?.family.name}
+        inviterName={qrInvite?.inviterName}
+      />
     </div>
+  );
+}
+
+// ---------- QR popup ----------
+interface QrPopupProps {
+  invite: InvitationDetail | null;
+  onClose: () => void;
+  familyName?: string;
+  inviterName?: string;
+}
+
+function QrPopup({ invite, onClose, familyName, inviterName }: QrPopupProps) {
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  if (!invite) return null;
+  const expires = invite.expiresAt ? new Date(invite.expiresAt) : null;
+  const accepted = invite.status === 'ACCEPTED';
+  const expired = invite.status === 'EXPIRED';
+  const revoked = invite.status === 'REVOKED';
+
+  // Copy-to-clipboard helper with a brief inline visual confirmation.
+  const copy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast.success(`Đã sao chép ${label}`);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      showToast.error('Không thể sao chép');
+    }
+  };
+
+  const handleDownloadCard = async () => {
+    const node = cardRef.current;
+    if (!node) return;
+    try {
+      await downloadNodeAsPng(
+        node,
+        `thiep-moi-${invite.inviteCode}.png`
+      );
+      showToast.success('Đã tải thiệp mời về máy');
+    } catch (err) {
+      showToast.error(
+        err instanceof Error ? err.message : 'Không thể tải thiệp'
+      );
+    }
+  };
+
+  const handleDownloadQrOnly = async () => {
+    try {
+      await downloadQrPng(invite.inviteUrl, `qr-${invite.inviteCode}.png`);
+      showToast.success('Đã tải QR về máy');
+    } catch (err) {
+      showToast.error(
+        err instanceof Error ? err.message : 'Không thể tải QR'
+      );
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} title="QR mã mời" size="md">
+      <div className="space-y-5">
+        {/* The card that gets exported as a single PNG when the user clicks
+            "Tải thiệp mời". Keep its layout self-contained (no Tailwind
+            gradients that html-to-image can't render) so the exported image
+            looks identical. */}
+        <div
+          ref={cardRef}
+          className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"
+          style={{ background: 'linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fff1f2 100%)' }}
+        >
+          <div className="text-center">
+            <p className="text-xs font-medium uppercase tracking-widest text-amber-700">
+              Lời mời tham gia gia đình
+            </p>
+            {familyName && (
+              <h2 className="mt-1 font-serif text-2xl font-semibold text-neutral-900">
+                {familyName}
+              </h2>
+            )}
+            {inviterName && (
+              <p className="mt-1 text-sm text-neutral-600">
+                Mời bởi <span className="font-medium">{inviterName}</span>
+              </p>
+            )}
+          </div>
+
+          <div className="flex justify-center">
+            <div className="rounded-xl bg-white p-3 shadow ring-1 ring-neutral-200">
+              <QrCode
+                value={invite.inviteUrl}
+                size={200}
+                ariaLabel={`QR code cho lời mời ${invite.inviteCode}`}
+              />
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-1 text-center text-xs font-medium uppercase tracking-wider text-neutral-500">
+              Mã mời
+            </p>
+            <div className="select-all rounded-lg border-2 border-dashed border-neutral-300 bg-white px-3 py-3 text-center font-mono text-2xl font-bold tracking-[0.35em] text-neutral-900">
+              {invite.inviteCode}
+            </div>
+          </div>
+
+          <div className="space-y-1 text-center text-xs text-neutral-500">
+            <p>Quét QR hoặc nhập mã trên trang tham gia gia đình.</p>
+            <p className="break-all font-mono text-[11px] text-neutral-400">
+              {invite.inviteUrl}
+            </p>
+          </div>
+
+          {expires && (
+            <p
+              className={`text-center text-xs ${
+                expired ? 'text-red-700' : 'text-amber-800'
+              }`}
+            >
+              {accepted
+                ? 'Đã được chấp nhận'
+                : expired
+                  ? 'Đã hết hạn'
+                  : revoked
+                    ? 'Đã thu hồi'
+                    : `Hết hạn: ${expires.toLocaleString('vi-VN')}`}
+            </p>
+          )}
+        </div>
+
+        {/* Click-to-copy invite code (a nicer alternative to the
+            select-all + ⌘C dance). */}
+        <button
+          type="button"
+          onClick={() => copy(invite.inviteCode, 'mã mời')}
+          className="group flex w-full items-center gap-2 rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2.5 text-left transition-colors hover:border-primary-300 hover:bg-primary-50"
+          aria-label="Click để sao chép mã mời"
+        >
+          <span className="flex-1 text-center font-mono text-lg font-semibold tracking-widest text-neutral-900">
+            {invite.inviteCode}
+          </span>
+          <span
+            className={`flex items-center gap-1 text-xs font-medium ${
+              codeCopied ? 'text-emerald-600' : 'text-neutral-500 group-hover:text-primary-600'
+            }`}
+          >
+            {codeCopied ? (
+              <>
+                <Check className="h-3.5 w-3.5" /> Đã sao chép
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5" /> Sao chép
+              </>
+            )}
+          </span>
+        </button>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-neutral-700">
+            Đường dẫn mời
+          </label>
+          <div
+            className="truncate rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700"
+            onClick={() => copy(invite.inviteUrl, 'đường dẫn')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                copy(invite.inviteUrl, 'đường dẫn');
+              }
+            }}
+          >
+            {invite.inviteUrl}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadQrOnly}
+            leftIcon={<Download className="h-3.5 w-3.5" />}
+          >
+            Tải QR
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleDownloadCard}
+            leftIcon={<ImageDown className="h-3.5 w-3.5" />}
+          >
+            Tải thiệp mời
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -252,9 +463,10 @@ interface InvitationRowProps {
   copied: boolean;
   onCopy: (text: string) => void;
   onRevoke: () => void;
+  onQr: () => void;
 }
 
-function InvitationRow({ invite, copied, onCopy, onRevoke }: InvitationRowProps) {
+function InvitationRow({ invite, copied, onCopy, onRevoke, onQr }: InvitationRowProps) {
   const meta = STATUS_META[invite.status];
   const Icon = meta.icon;
   const expires = invite.expiresAt ? new Date(invite.expiresAt) : null;
@@ -321,15 +533,16 @@ function InvitationRow({ invite, copied, onCopy, onRevoke }: InvitationRowProps)
           >
             {copied ? 'Đã sao chép' : 'Sao chép link'}
           </Button>
-          <Link
-            href={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(invite.inviteUrl)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="ghost" size="sm" leftIcon={<QrCodeIcon className="h-3.5 w-3.5" />}>
+          {onQr && (
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<QrCodeIcon className="h-3.5 w-3.5" />}
+              onClick={() => onQr()}
+            >
               QR
             </Button>
-          </Link>
+          )}
           {invite.status === 'PENDING' && (
             <Button
               variant="danger"
