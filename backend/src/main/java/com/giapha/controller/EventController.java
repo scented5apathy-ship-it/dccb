@@ -36,6 +36,11 @@ public class EventController {
         return eventService.create(familyId, req);
     }
 
+    @GetMapping("/events/{eventId}")
+    public Map<String, Object> get(@PathVariable UUID eventId) {
+        return eventService.get(eventId);
+    }
+
     @PutMapping("/events/{eventId}")
     public Map<String, Object> update(@PathVariable UUID eventId,
                                       @Valid @RequestBody UpdateEventRequest req) {
