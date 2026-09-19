@@ -87,6 +87,17 @@ public class StoryService {
             .isFeatured(Boolean.TRUE.equals(req.getIsFeatured()))
             .viewCount(0)
             .build();
+
+        if (req.getRelatedMemberIds() != null && !req.getRelatedMemberIds().isEmpty()) {
+            UUID[] ids = req.getRelatedMemberIds().toArray(new UUID[0]);
+            Integer validCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM caygiaphaso.family_members WHERE family_id = ? AND id = ANY(?)",
+                Integer.class, familyId, ids);
+            if (validCount == null || validCount != req.getRelatedMemberIds().size()) {
+                throw new BadRequestException("Một số thành viên được gắn thẻ không thuộc gia tộc này");
+            }
+        }
+
         UUID storyId = storyRepository.insert(s);
 
         List<StoryMedia> mediaList = new ArrayList<>();

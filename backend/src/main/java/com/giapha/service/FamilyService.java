@@ -219,10 +219,12 @@ public class FamilyService {
         }
 
         String role = roleResolver.resolveRole(family.getId(), user);
+        Family refreshed = familyRepository.findById(family.getId())
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy gia tộc"));
         return FamilyWithRoleDto.builder()
-            .family(FamilyDto.from(family))
+            .family(FamilyDto.from(refreshed))
             .role(role == null ? (inv.getRole() == null ? FamilyRoleResolver.VIEWER : inv.getRole().name()) : role)
-            .memberCount(family.getMemberCount())
+            .memberCount(refreshed.getMemberCount())
             .isCreator(false)
             .build();
     }

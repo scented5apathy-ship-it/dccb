@@ -10,6 +10,7 @@ import com.giapha.repository.*;
 import com.giapha.security.CurrentUser;
 import com.giapha.util.AuthorizationHelper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final AuthorizationHelper authz;
     private final CurrentUser currentUser;
+    private final JdbcTemplate jdbc;
 
     public Map<String, Object> listChats(UUID familyId) {
         UUID userId = currentUser.getCurrentUserId();
@@ -65,6 +67,9 @@ public class ChatService {
         if (req.getMemberIds() != null) {
             for (UUID memberId : req.getMemberIds()) {
                 // Member IDs from the request are user IDs in this context.
+                if (!userBelongsToFamily(memberId, familyId)) {
+                    throw new BadRequestException("User không thuộc gia tộc này");
+                }
                 chatMemberRepository.add(id, memberId, "MEMBER");
             }
         }
@@ -129,6 +134,13 @@ public class ChatService {
             throw new BadRequestException("messageType không hợp lệ");
         }
 
+        if (req.getReplyToMessageId() != null) {
+            ChatMessage reply = messageRepository.findById(req.getReplyToMessageId());
+            if (reply != null && !reply.getChatId().equals(chatId)) {
+                throw new BadRequestException("Tin nhắn trả lời phải thuộc cùng cuộc trò chuyện");
+            }
+        }
+
         ChatMessage m = ChatMessage.builder()
             .chatId(chatId)
             .senderId(userId)
@@ -153,5 +165,12 @@ public class ChatService {
         ));
         out.put("replyTo", reply);
         return out;
+    }
+
+    private boolean userBelongsToFamily(UUID userId, UUID familyId) {
+        Integer count = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM caygiaphaso.family_members WHERE user_id = ? AND family_id = ?",
+            Integer.class, userId, familyId);
+        return count != null && count > 0;
     }
 }

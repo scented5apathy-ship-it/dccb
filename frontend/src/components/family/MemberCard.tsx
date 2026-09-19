@@ -25,12 +25,12 @@ export function MemberCard({ member }: MemberCardProps) {
             </h3>
             <p className="mt-0.5 truncate text-xs text-neutral-500">
               {member.birthPlace ?? '—'}
-              {member.dateOfBirth ? ` · ${formatDate(member.dateOfBirth)}` : ''}
+              {member.birthDate ? ` · ${formatDate(member.birthDate)}` : ''}
             </p>
           </div>
-          {typeof member.generation === 'number' && (
+          {typeof member.generationNumber === 'number' && (
             <Badge variant="primary" size="sm">
-              Đời {member.generation}
+              Đời {member.generationNumber}
             </Badge>
           )}
         </div>

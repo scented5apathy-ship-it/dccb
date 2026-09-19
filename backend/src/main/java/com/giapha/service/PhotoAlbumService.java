@@ -1,5 +1,6 @@
 package com.giapha.service;
 
+import com.giapha.exception.BadRequestException;
 import com.giapha.exception.ResourceNotFoundException;
 import com.giapha.model.dto.album.AddPhotoRequest;
 import com.giapha.model.dto.album.CreateAlbumRequest;
@@ -9,6 +10,7 @@ import com.giapha.repository.*;
 import com.giapha.security.CurrentUser;
 import com.giapha.util.AuthorizationHelper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -118,11 +120,19 @@ public class PhotoAlbumService {
         if (req.getMemberIds() != null) {
             for (UUID memberId : req.getMemberIds()) {
                 try {
-                    jdbc.update(
-                        "INSERT INTO caygiaphaso.photo_tags (id, photo_id, tag_type, tagged_member_id) " +
-                        "VALUES (?, ?, 'MEMBER', ?)",
-                        UUID.randomUUID(), id, memberId);
-                } catch (Exception ignore) {}
+                    UUID actualFamily = jdbc.queryForObject(
+                        "SELECT family_id FROM caygiaphaso.family_members WHERE id = ?",
+                        UUID.class, memberId);
+                    if (actualFamily == null || !actualFamily.equals(album.getFamilyId())) {
+                        throw new BadRequestException("Thành viên " + memberId + " không thuộc gia tộc của album");
+                    }
+                } catch (EmptyResultDataAccessException ex) {
+                    throw new BadRequestException("Thành viên " + memberId + " không thuộc gia tộc của album");
+                }
+                jdbc.update(
+                    "INSERT INTO caygiaphaso.photo_tags (id, photo_id, tag_type, tagged_member_id) " +
+                    "VALUES (?, ?, 'MEMBER', ?)",
+                    UUID.randomUUID(), id, memberId);
             }
         }
 

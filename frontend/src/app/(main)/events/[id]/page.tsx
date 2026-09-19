@@ -190,17 +190,38 @@ export default function EventDetailPage({ params }: PageProps) {
         </div>
       </Card>
 
-      {user && familyId && (
-        <Card padding="lg">
-          <h2 className="mb-3 text-lg font-semibold text-neutral-900">
-            Bạn sẽ tham dự?
-          </h2>
-          <EventRSVPSelector
-            eventId={eventId}
-            memberId={user.id}
-          />
-        </Card>
-      )}
+      {user && familyId && (() => {
+        // Backend EventService.rsvp expects a FamilyMember UUID, NOT the
+        // user's account UUID. Look it up from the family's members list.
+        const members = membersQuery.data?.members ?? [];
+        const memberEntry =
+          members.find((entry) => entry.member?.userId === user.id) ??
+          members.find((entry) => entry.member?.id === user.id);
+        const memberId = memberEntry?.member?.id;
+        if (!memberId) {
+          return (
+            <Card padding="lg">
+              <h2 className="mb-2 text-lg font-semibold text-neutral-900">
+                Bạn sẽ tham dự?
+              </h2>
+              <p className="text-sm text-neutral-500">
+                Bạn chưa liên kết với thành viên nào trong gia đình này, nên không thể ghi nhận RSVP.
+              </p>
+            </Card>
+          );
+        }
+        return (
+          <Card padding="lg">
+            <h2 className="mb-3 text-lg font-semibold text-neutral-900">
+              Bạn sẽ tham dự?
+            </h2>
+            <EventRSVPSelector
+              eventId={eventId}
+              memberId={memberId}
+            />
+          </Card>
+        );
+      })()}
 
       <Card padding="lg">
         <h2 className="mb-3 text-lg font-semibold text-neutral-900">

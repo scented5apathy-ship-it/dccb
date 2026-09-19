@@ -1,5 +1,6 @@
 package com.giapha.service;
 
+import com.giapha.exception.BadRequestException;
 import com.giapha.exception.ForbiddenException;
 import com.giapha.exception.ResourceNotFoundException;
 import com.giapha.model.dto.achievement.AwardAchievementRequest;
@@ -11,6 +12,7 @@ import com.giapha.repository.NotificationRepository;
 import com.giapha.security.CurrentUser;
 import com.giapha.util.AuthorizationHelper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -81,6 +83,17 @@ public class AchievementService {
         }
         if (!authz.isFamilyAdmin(userId, familyId)) {
             throw new ForbiddenException("Chỉ ADMIN mới có thể trao thành tích");
+        }
+
+        try {
+            UUID myMemberId = jdbc.queryForObject(
+                "SELECT id FROM caygiaphaso.family_members WHERE family_id = ? AND user_id = ?",
+                UUID.class, familyId, userId);
+            if (memberId.equals(myMemberId)) {
+                throw new BadRequestException("Bạn không thể tự trao thành tích cho mình");
+            }
+        } catch (EmptyResultDataAccessException ignored) {
+            // current user has no member row; nothing to compare against
         }
 
         Achievement ach = achievementRepository.findByCode(req.getAchievementCode())

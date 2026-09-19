@@ -27,13 +27,17 @@ export default function ChatPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string | undefined>();
 
   const familiesQuery = useQuery({
     queryKey: ['families', 'list'],
     queryFn: () => familyApi.list(),
     enabled: Boolean(user),
   });
-  const familyId = familiesQuery.data?.families?.[0]?.family?.id;
+  const families = familiesQuery.data?.families ?? [];
+
+  // Default to the first family but let the user switch via a dropdown.
+  const familyId = selectedFamilyId ?? families[0]?.family?.id;
 
   const chatsQuery = useChats(familyId);
   const messagesQuery = useChatMessages(selectedChatId);
@@ -74,7 +78,7 @@ export default function ChatPage() {
   return (
     <div className="space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 font-serif text-2xl font-semibold text-neutral-900">
             <MessageCircle className="h-6 w-6 text-primary-600" />
             Trò chuyện
@@ -83,13 +87,31 @@ export default function ChatPage() {
             Trò chuyện với các thành viên trong gia đình.
           </p>
         </div>
-        <Button
-          leftIcon={<Plus className="h-4 w-4" />}
-          onClick={() => setCreateOpen(true)}
-          disabled={!familyId}
-        >
-          Cuộc trò chuyện mới
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {families.length > 1 && (
+            <select
+              value={familyId ?? ''}
+              onChange={(e) => {
+                setSelectedFamilyId(e.target.value || undefined);
+                setSelectedChatId(undefined);
+              }}
+              className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
+            >
+              {families.map((f) => (
+                <option key={f.family.id} value={f.family.id}>
+                  {f.family.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <Button
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setCreateOpen(true)}
+            disabled={!familyId}
+          >
+            Cuộc trò chuyện mới
+          </Button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">

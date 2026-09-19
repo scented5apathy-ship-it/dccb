@@ -2,6 +2,7 @@ package com.giapha.controller;
 
 import com.giapha.model.dto.story.CreateStoryTagRequest;
 import com.giapha.service.StoryTagService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +20,7 @@ public class StoryTagController {
     }
 
     @PostMapping("/story-tags")
-    public Map<String, Object> create(@RequestBody CreateStoryTagRequest req) {
+    public Map<String, Object> create(@Valid @RequestBody CreateStoryTagRequest req) {
         return storyTagService.create(req);
     }
 }

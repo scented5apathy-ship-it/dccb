@@ -164,7 +164,7 @@ export const familyApi = {
   relationships: (familyId: string): Promise<Relationship[]> =>
     apiClient
       .get<Relationship[]>(`/relationships?familyId=${familyId}`)
-      .then((r) => r.data),
+      .then((r) => (Array.isArray(r.data) ? r.data : [])),
 };
 
 // ---------------- Members ----------------
@@ -431,7 +431,23 @@ export const notificationApi = {
   ): Promise<NotificationListResponse> =>
     apiClient
       .get<NotificationListResponse>('/notifications', { params })
-      .then((r) => r.data),
+      .then((r): NotificationListResponse => {
+        const fallback: NotificationListResponse = {
+          notifications: [],
+          total: 0,
+          unreadCount: 0,
+          page: 0,
+          size: 0,
+        };
+        if (!r.data) return fallback;
+        return {
+          ...fallback,
+          ...r.data,
+          notifications: Array.isArray(r.data.notifications)
+            ? r.data.notifications
+            : [],
+        };
+      }),
   markRead: (id: string): Promise<NotificationMarkReadResponse> =>
     apiClient
       .post<NotificationMarkReadResponse>(`/notifications/${id}/read`)
@@ -498,7 +514,7 @@ export const recipeApi = {
   listOrigins: (recipeId: string): Promise<RecipeOrigin[]> =>
     apiClient
       .get<RecipeOrigin[]>(`/recipes/${recipeId}/origins`)
-      .then((r) => r.data),
+      .then((r) => (Array.isArray(r.data) ? r.data : [])),
 
   /** Full nested genealogy tree - the showcase feature. */
   genealogyTree: (recipeId: string): Promise<RecipeGenealogyTree> =>
@@ -539,7 +555,7 @@ export const recipeApi = {
   comments: (recipeId: string): Promise<RecipeThreadComment[]> =>
     apiClient
       .get<RecipeThreadComment[]>(`/recipes/${recipeId}/comments`)
-      .then((r) => r.data),
+      .then((r) => (Array.isArray(r.data) ? r.data : [])),
 
   /** Update a comment. */
   updateComment: (

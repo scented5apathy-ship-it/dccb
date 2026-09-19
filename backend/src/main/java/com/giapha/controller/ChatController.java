@@ -3,6 +3,7 @@ package com.giapha.controller;
 import com.giapha.model.dto.chat.CreateChatRequest;
 import com.giapha.model.dto.chat.SendMessageRequest;
 import com.giapha.service.ChatService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class ChatController {
 
     @PostMapping("/families/{familyId}/chats")
     public Map<String, Object> createChat(@PathVariable UUID familyId,
-                                          @RequestBody CreateChatRequest req) {
+                                          @Valid @RequestBody CreateChatRequest req) {
         return chatService.createChat(familyId, req);
     }
 
@@ -37,7 +38,7 @@ public class ChatController {
 
     @PostMapping("/chats/{chatId}/messages")
     public Map<String, Object> sendMessage(@PathVariable UUID chatId,
-                                           @RequestBody SendMessageRequest req) {
+                                           @Valid @RequestBody SendMessageRequest req) {
         return chatService.sendMessage(chatId, req);
     }
 }

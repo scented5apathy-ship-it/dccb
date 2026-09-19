@@ -53,9 +53,8 @@ public class GenerationService {
         }
         // Editors and admins can create generations.
         if (!(FamilyRoleResolver.ADMIN.equals(role)
-                || FamilyRoleResolver.EDITOR.equals(role)
-                || FamilyRoleResolver.MEMBER.equals(role))) {
-            throw new ForbiddenException("Bạn không có quyền tạo thế hệ mới");
+                || FamilyRoleResolver.EDITOR.equals(role))) {
+            throw new ForbiddenException("Chỉ admin hoặc editor mới có thể tạo thế hệ");
         }
 
         String name = req.getName() != null && !req.getName().isBlank()
@@ -84,8 +83,9 @@ public class GenerationService {
     public MessageResponse delete(UUID generationId, User user) {
         Generation g = generationRepository.findById(generationId)
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thế hệ"));
-        if (!roleResolver.isCreator(g.getFamilyId(), user.getId())) {
-            throw new ForbiddenException("Chỉ quản trị viên mới có thể xoá thế hệ");
+        String role = roleResolver.resolveRole(g.getFamilyId(), user);
+        if (!FamilyRoleResolver.ADMIN.equals(role)) {
+            throw new ForbiddenException("Chỉ admin mới có thể xoá thế hệ");
         }
         int membersInGen = generationRepository.countMembersInGeneration(generationId);
         if (membersInGen > 0) {

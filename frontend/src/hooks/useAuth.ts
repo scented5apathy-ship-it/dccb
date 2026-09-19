@@ -164,7 +164,14 @@ export function useAuth(): UseAuth {
 
 export function useLogout(): ReturnType<typeof useMutation<void, Error, void>> {
   const { logout } = useAuthStore();
-  return useMutation({ mutationFn: () => logout() });
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => logout(),
+    onSettled: () => {
+      // Clear all cached queries so the next user cannot see stale data.
+      queryClient.clear();
+    },
+  });
 }
 
 export default useAuth;

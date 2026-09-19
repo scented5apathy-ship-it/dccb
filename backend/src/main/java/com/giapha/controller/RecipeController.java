@@ -71,7 +71,7 @@ public class RecipeController {
     @PutMapping("/recipes/{recipeId}")
     public RecipeDetailDto updateRecipe(
             @PathVariable UUID recipeId,
-            @RequestBody UpdateRecipeRequest req,
+            @Valid @RequestBody UpdateRecipeRequest req,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return recipeService.updateRecipe(recipeId, req, currentUser);
     }

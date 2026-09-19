@@ -3,6 +3,7 @@ package com.giapha.controller;
 import com.giapha.model.dto.story.CreateStoryRequest;
 import com.giapha.model.dto.story.UpdateStoryRequest;
 import com.giapha.service.StoryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,7 +31,7 @@ public class StoryController {
 
     @PostMapping("/families/{familyId}/stories")
     public Map<String, Object> create(@PathVariable UUID familyId,
-                                      @RequestBody CreateStoryRequest req) {
+                                      @Valid @RequestBody CreateStoryRequest req) {
         return storyService.create(familyId, req);
     }
 
@@ -41,7 +42,7 @@ public class StoryController {
 
     @PutMapping("/stories/{storyId}")
     public Map<String, Object> update(@PathVariable UUID storyId,
-                                      @RequestBody UpdateStoryRequest req) {
+                                      @Valid @RequestBody UpdateStoryRequest req) {
         return storyService.update(storyId, req);
     }
 

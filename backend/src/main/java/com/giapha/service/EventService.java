@@ -11,6 +11,7 @@ import com.giapha.repository.*;
 import com.giapha.security.CurrentUser;
 import com.giapha.util.AuthorizationHelper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -92,6 +93,9 @@ public class EventService {
         }
         if (req.getAttendeeMemberIds() != null) {
             for (UUID memberId : req.getAttendeeMemberIds()) {
+                if (!memberBelongsToFamily(memberId, familyId)) {
+                    throw new BadRequestException("Thành viên " + memberId + " không thuộc gia tộc này");
+                }
                 attendeeRepository.upsert(eventId, memberId, "PENDING", null);
             }
         }
@@ -157,6 +161,10 @@ public class EventService {
             throw new BadRequestException("rsvpStatus không hợp lệ");
         }
 
+        if (req.getMemberId() != null && !memberBelongsToFamily(req.getMemberId(), e.getFamilyId())) {
+            throw new BadRequestException("Thành viên không thuộc gia tộc của sự kiện này");
+        }
+
         UUID id = attendeeRepository.upsert(eventId, req.getMemberId(), req.getRsvpStatus(), req.getNotes());
         EventAttendee a = attendeeRepository.findById(id).orElseThrow();
         return Map.of("attendee", a);
@@ -205,8 +213,19 @@ public class EventService {
             return jdbc.queryForObject(
                 "SELECT id FROM caygiaphaso.family_members WHERE family_id = ? AND user_id = ?",
                 UUID.class, familyId, userId);
-        } catch (Exception e) {
+        } catch (EmptyResultDataAccessException e) {
             return null;
+        }
+    }
+
+    private boolean memberBelongsToFamily(UUID memberId, UUID familyId) {
+        try {
+            UUID actualFamily = jdbc.queryForObject(
+                "SELECT family_id FROM caygiaphaso.family_members WHERE id = ?",
+                UUID.class, memberId);
+            return actualFamily != null && actualFamily.equals(familyId);
+        } catch (EmptyResultDataAccessException e) {
+            return false;
         }
     }
 }

@@ -18,10 +18,10 @@ export function FamilyCard({ family }: FamilyCardProps) {
             <h3 className="truncate text-base font-semibold text-neutral-900">
               {family.name}
             </h3>
-            {family.origin && (
+            {family.originLocation && (
               <p className="mt-1 flex items-center gap-1 text-xs text-neutral-500">
                 <MapPin className="h-3.5 w-3.5" />
-                {family.origin}
+                {family.originLocation}
               </p>
             )}
           </div>

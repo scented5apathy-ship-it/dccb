@@ -3,6 +3,7 @@ package com.giapha.controller;
 import com.giapha.model.dto.album.AddPhotoRequest;
 import com.giapha.model.dto.album.CreateAlbumRequest;
 import com.giapha.service.PhotoAlbumService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class PhotoAlbumController {
 
     @PostMapping("/families/{familyId}/albums")
     public Map<String, Object> createAlbum(@PathVariable UUID familyId,
-                                           @RequestBody CreateAlbumRequest req) {
+                                           @Valid @RequestBody CreateAlbumRequest req) {
         return photoAlbumService.createAlbum(familyId, req);
     }
 
@@ -33,7 +34,7 @@ public class PhotoAlbumController {
 
     @PostMapping("/albums/{albumId}/photos")
     public Map<String, Object> addPhoto(@PathVariable UUID albumId,
-                                        @RequestBody AddPhotoRequest req) {
+                                        @Valid @RequestBody AddPhotoRequest req) {
         return photoAlbumService.addPhoto(albumId, req);
     }
 }

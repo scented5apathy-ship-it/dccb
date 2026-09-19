@@ -2,6 +2,7 @@ package com.giapha.controller;
 
 import com.giapha.model.dto.tc.CreateTimeCapsuleRequest;
 import com.giapha.service.TimeCapsuleService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,7 +26,7 @@ public class TimeCapsuleController {
 
     @PostMapping("/families/{familyId}/time-capsules")
     public Map<String, Object> create(@PathVariable UUID familyId,
-                                      @RequestBody CreateTimeCapsuleRequest req) {
+                                      @Valid @RequestBody CreateTimeCapsuleRequest req) {
         return timeCapsuleService.create(familyId, req);
     }
 

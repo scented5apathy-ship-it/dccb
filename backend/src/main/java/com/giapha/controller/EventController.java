@@ -5,6 +5,7 @@ import com.giapha.model.dto.event.EventPhotoRequest;
 import com.giapha.model.dto.event.RsvpRequest;
 import com.giapha.model.dto.event.UpdateEventRequest;
 import com.giapha.service.EventService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,13 +32,13 @@ public class EventController {
 
     @PostMapping("/families/{familyId}/events")
     public Map<String, Object> create(@PathVariable UUID familyId,
-                                      @RequestBody CreateEventRequest req) {
+                                      @Valid @RequestBody CreateEventRequest req) {
         return eventService.create(familyId, req);
     }
 
     @PutMapping("/events/{eventId}")
     public Map<String, Object> update(@PathVariable UUID eventId,
-                                      @RequestBody UpdateEventRequest req) {
+                                      @Valid @RequestBody UpdateEventRequest req) {
         return eventService.update(eventId, req);
     }
 
@@ -48,13 +49,13 @@ public class EventController {
 
     @PostMapping("/events/{eventId}/rsvp")
     public Map<String, Object> rsvp(@PathVariable UUID eventId,
-                                    @RequestBody RsvpRequest req) {
+                                    @Valid @RequestBody RsvpRequest req) {
         return eventService.rsvp(eventId, req);
     }
 
     @PostMapping("/events/{eventId}/photos")
     public Map<String, Object> addPhoto(@PathVariable UUID eventId,
-                                        @RequestBody EventPhotoRequest req) {
+                                        @Valid @RequestBody EventPhotoRequest req) {
         return eventService.addPhoto(eventId, req.getPhotoUrl(), req.getCaption());
     }
 

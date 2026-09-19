@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -61,13 +62,26 @@ public class TimeCapsuleService {
         UUID userId = currentUser.getCurrentUserId();
         authz.requireFamilyMember(userId, familyId);
 
-        if (req.getUnlockDate() == null || req.getUnlockDate().isBefore(LocalDate.now())) {
+        if (req.getUnlockDate() == null || req.getUnlockDate().isBefore(LocalDate.now(ZoneOffset.UTC))) {
             throw new BadRequestException("unlockDate phải ở tương lai");
         }
         if (!"DATE".equals(req.getUnlockCondition())
             && !"EVENT".equals(req.getUnlockCondition())
             && !"MANUAL".equals(req.getUnlockCondition())) {
             throw new BadRequestException("unlockCondition không hợp lệ");
+        }
+
+        if (req.getRecipientMemberId() != null) {
+            try {
+                UUID recipientFamily = jdbc.queryForObject(
+                    "SELECT family_id FROM caygiaphaso.family_members WHERE id = ?",
+                    UUID.class, req.getRecipientMemberId());
+                if (recipientFamily == null || !recipientFamily.equals(familyId)) {
+                    throw new BadRequestException("Người nhận phải thuộc gia tộc này");
+                }
+            } catch (org.springframework.dao.EmptyResultDataAccessException ex) {
+                throw new BadRequestException("Người nhận phải thuộc gia tộc này");
+            }
         }
 
         TimeCapsule tc = TimeCapsule.builder()
@@ -105,7 +119,7 @@ public class TimeCapsuleService {
 
         TimeCapsule saved = capsuleRepository.findById(id).orElseThrow();
         long days = saved.getUnlockDate() != null
-            ? (long) (saved.getUnlockDate().toEpochDay() - LocalDate.now().toEpochDay())
+            ? (long) (saved.getUnlockDate().toEpochDay() - LocalDate.now(ZoneOffset.UTC).toEpochDay())
             : 0L;
 
         Map<String, Object> out = new LinkedHashMap<>();
@@ -147,8 +161,8 @@ public class TimeCapsuleService {
         // Validate unlock state
         switch (tc.getUnlockCondition()) {
             case "DATE" -> {
-                if (tc.getUnlockDate() != null && tc.getUnlockDate().isAfter(LocalDate.now())) {
-                    long days = tc.getUnlockDate().toEpochDay() - LocalDate.now().toEpochDay();
+                if (tc.getUnlockDate() != null && tc.getUnlockDate().isAfter(LocalDate.now(ZoneOffset.UTC))) {
+                    long days = tc.getUnlockDate().toEpochDay() - LocalDate.now(ZoneOffset.UTC).toEpochDay();
                     throw new TimeCapsuleLockedException(days);
                 }
             }

@@ -2,6 +2,7 @@ package com.giapha.controller;
 
 import com.giapha.model.dto.achievement.AwardAchievementRequest;
 import com.giapha.service.AchievementService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +27,7 @@ public class AchievementController {
 
     @PostMapping("/members/{memberId}/achievements")
     public Map<String, Object> award(@PathVariable UUID memberId,
-                                     @RequestBody AwardAchievementRequest req) {
+                                     @Valid @RequestBody AwardAchievementRequest req) {
         return achievementService.award(memberId, req);
     }
 }

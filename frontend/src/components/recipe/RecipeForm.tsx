@@ -38,7 +38,7 @@ const recipeSchema = z.object({
   description: z.string().optional(),
   story: z.string().optional(),
   cuisineType: z.string().optional(),
-  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).optional(),
   prepTimeMinutes: z.string().optional(),
   cookTimeMinutes: z.string().optional(),
   servings: z.string().optional(),
@@ -80,7 +80,7 @@ export function RecipeForm({
       description: initialValues?.description ?? '',
       story: initialValues?.story ?? '',
       cuisineType: initialValues?.cuisineType ?? '',
-      difficulty: initialValues?.difficulty ?? 'medium',
+      difficulty: initialValues?.difficulty ?? 'MEDIUM',
       prepTimeMinutes: String(initialValues?.prepTimeMinutes ?? '0'),
       cookTimeMinutes: String(initialValues?.cookTimeMinutes ?? '0'),
       servings: String(initialValues?.servings ?? '2'),
@@ -191,9 +191,9 @@ export function RecipeForm({
               className="block w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
               {...register('difficulty')}
             >
-              <option value="easy">Dễ</option>
-              <option value="medium">Trung bình</option>
-              <option value="hard">Khó</option>
+              <option value="EASY">Dễ</option>
+              <option value="MEDIUM">Trung bình</option>
+              <option value="HARD">Khó</option>
             </select>
           </div>
         </div>
