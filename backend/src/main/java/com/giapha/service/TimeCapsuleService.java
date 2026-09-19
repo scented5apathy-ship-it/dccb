@@ -39,7 +39,11 @@ public class TimeCapsuleService {
     public Map<String, Object> list(UUID familyId, String status, UUID recipientId) {
         authz.requireFamilyMember(currentUser.getCurrentUserId(), familyId);
 
-        var rows = capsuleRepository.listWithStatus(familyId, status, recipientId);
+        // The frontend uses friendly lowercase tokens ('sealed', 'available', 'opened'),
+        // but the SQL view/computed status is uppercase ('LOCKED', 'AVAILABLE', 'OPENED').
+        // Translate here so the filter is case-insensitive and survives renames.
+        String dbStatus = mapFilterToStatus(status);
+        var rows = capsuleRepository.listWithStatus(familyId, dbStatus, recipientId);
         var items = new java.util.ArrayList<Map<String, Object>>();
         for (var r : rows) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -212,5 +216,22 @@ public class TimeCapsuleService {
 
         capsuleRepository.delete(capsuleId);
         return Map.of("message", "Time capsule deleted");
+    }
+
+    /**
+     * Map a UI-facing status token (lowercase, friendly) to the SQL-computed
+     * status (uppercase). Returns null when no filter is requested so the
+     * repository returns every capsule.
+     */
+    private String mapFilterToStatus(String filter) {
+        if (filter == null || filter.isBlank()) return null;
+        return switch (filter.trim().toLowerCase()) {
+            case "sealed"    -> "LOCKED";
+            case "available" -> "AVAILABLE";
+            case "opened"    -> "OPENED";
+            // Best-effort pass-through — covers future statuses added without
+            // changing the frontend.
+            default -> filter.trim().toUpperCase();
+        };
     }
 }
