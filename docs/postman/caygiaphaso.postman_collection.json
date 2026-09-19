@@ -1,0 +1,1082 @@
+{
+  "info": {
+    "name": "CâyGiaPhảSố API",
+    "description": "Complete API collection for CâyGiaPhảSố (AncestryTree) — Spring Boot 3.2.5 backend. Includes all 76 endpoints: auth, users, families, members, recipes (with novel genealogy), stories, time capsules, events, photos, chat, notifications, achievements.\n\nImport this into Postman v9+ along with the matching environment file. Run the `Auth > Login` request first to populate {{accessToken}} for everything else.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "caygiaphaso-collection-2026-09-19",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-attach Authorization header from {{accessToken}} for all authenticated requests",
+          "if (pm.variables.has('accessToken') && pm.variables.get('accessToken') !== '' && pm.variables.get('accessToken') !== undefined) {",
+          "  pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + pm.variables.get('accessToken') });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Default smoke test for every request: status and response time",
+          "pm.test('Status code is 2xx', function () {",
+          "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+          "});",
+          "pm.test('Response time < 1500ms', function () {",
+          "  pm.expect(pm.response.responseTime).to.be.below(1500);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new.user@example.com\",\n  \"password\": \"Password123!\",\n  \"fullName\": \"Nguyen Van Moi\",\n  \"phone\": \"0912345678\"\n}"
+            },
+            "description": "Register a new user and receive JWT tokens."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  var body = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "  pm.collectionVariables.set('userId', body.user.id);",
+                  "  pm.test('accessToken is set', function () { pm.expect(body.accessToken).to.exist; });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@nguyen-family.vn\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "description": "Login with a seed account (all use password 'Password123!'). Seed users:\n- admin@nguyen-family.vn (Nguyễn Văn An — owner Họ Nguyễn)\n- lan@nguyen-family.vn (Nguyễn Thị Lan)\n- minh@nguyen-family.vn (Nguyễn Minh)\n- hoa@tran-family.vn (Trần Thị Hoa — owner Họ Trần)\n- tuan@le-family.vn (Lê Văn Tuấn — owner Họ Lê)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var body = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "  pm.collectionVariables.set('userId', body.user.id);",
+                  "  console.log('Logged in as:', body.user.email);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "description": "Exchange a refresh token for a new access token (and rotate)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var body = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "description": "Invalidate the current refresh token."
+          }
+        },
+        {
+          "name": "Get Current User (me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] },
+            "description": "Returns the currently authenticated user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Users",
+      "item": [
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] },
+            "description": "Fetch a public user profile by id."
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users/me", "host": ["{{baseUrl}}"], "path": ["users", "me"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn An (cập nhật)\",\n  \"phone\": \"0901234567\",\n  \"bio\": \"Trưởng họ Nguyễn - đã cập nhật tiểu sử.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/search?q=Nguyen", "host": ["{{baseUrl}}"], "path": ["users", "search"], "query": [{ "key": "q", "value": "Nguyen" }] },
+            "description": "Search users by name or email substring."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Families",
+      "item": [
+        {
+          "name": "List My Families",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/families", "host": ["{{baseUrl}}"], "path": ["families"] },
+            "description": "List families the current user belongs to."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var body = pm.response.json();",
+                  "  if (body.families && body.families.length > 0) {",
+                  "    pm.collectionVariables.set('familyId', body.families[0].family.id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Family",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families", "host": ["{{baseUrl}}"], "path": ["families"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Gia tộc họ Phạm (Test)\",\n  \"description\": \"Family created from Postman\",\n  \"foundedYear\": 1950,\n  \"motto\": \"Ăn quả nhớ kẻ trồng cây\"\n}"
+            },
+            "description": "Create a new family (you become ADMIN)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  var body = pm.response.json();",
+                  "  pm.collectionVariables.set('familyId', body.family.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Join Family",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/join", "host": ["{{baseUrl}}"], "path": ["families", "join"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inviteCode\": \"NGUYEN-2026-A1B2C3\"\n}"
+            },
+            "description": "Join a family using an invite code (admin-only issued)."
+          }
+        },
+        {
+          "name": "Get Family Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}"] }
+          }
+        },
+        {
+          "name": "Update Family",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motto\": \"Hiếu - Nghĩa - Trung - Tín (đã cập nhật)\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Generations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/generations", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "generations"] }
+          }
+        },
+        {
+          "name": "Create Generation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/generations", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "generations"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"generationNumber\": 6,\n  \"name\": \"Đời 6 - Cháu chắt\",\n  \"startYear\": 2010,\n  \"description\": \"Thế hệ sinh sau năm 2010\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Generation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/generations/{{generationId}}", "host": ["{{baseUrl}}"], "path": ["generations", "{{generationId}}"] }
+          }
+        },
+        {
+          "name": "Get Family Tree ⭐",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/tree", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "tree"] },
+            "description": "NOVEL FEATURE: returns the full nested family tree (generations → members → spouses → siblings → children)."
+          }
+        },
+        {
+          "name": "Create Invitation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/invitations", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "invitations"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"MEMBER\",\n  \"expiresInDays\": 7,\n  \"maxUses\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "List Heritages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/heritages", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "heritages"] }
+          }
+        },
+        {
+          "name": "Create Heritage",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/heritages", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "heritages"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bộ ảnh đám cưới 1955\",\n  \"description\": \"Album ảnh đám cưới ông bà nội\",\n  \"type\": \"PHOTO_ALBUM\",\n  \"imageUrl\": \"https://example.com/album-1955.jpg\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Family Members",
+      "item": [
+        {
+          "name": "List Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families/{{familyId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["families", "{{familyId}}", "members"],
+              "query": [{ "key": "aliveOnly", "value": "true", "disabled": true }]
+            },
+            "description": "Optional query params: generationId, search, aliveOnly"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var body = pm.response.json();",
+                  "  if (body.members && body.members.length > 0) {",
+                  "    pm.collectionVariables.set('memberId', body.members[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Member",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/members", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "members"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Văn Mới\",\n  \"nickname\": \"Mới\",\n  \"gender\": \"MALE\",\n  \"birthDate\": \"1990-05-15\",\n  \"occupation\": \"Kỹ sư\",\n  \"generationId\": \"aaaa1111-0000-0000-0000-000000000005\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Member",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/members/{{memberId}}", "host": ["{{baseUrl}}"], "path": ["members", "{{memberId}}"] }
+          }
+        },
+        {
+          "name": "Update Member",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/members/{{memberId}}", "host": ["{{baseUrl}}"], "path": ["members", "{{memberId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"occupation\": \"Nghệ nhân làm bánh (đã sửa)\",\n  \"biography\": \"Cập nhật tiểu sử\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/members/{{memberId}}", "host": ["{{baseUrl}}"], "path": ["members", "{{memberId}}"] }
+          }
+        },
+        {
+          "name": "Create Relationship",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/relationships", "host": ["{{baseUrl}}"], "path": ["relationships"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"familyId\": \"aaaaaaaa-0000-0000-0000-000000000001\",\n  \"fromMemberId\": \"a0000001-0000-0000-0000-000000000001\",\n  \"toMemberId\": \"a0000003-0000-0000-0000-000000000003\",\n  \"relationshipType\": \"PARENT\",\n  \"notes\": \"Cụ Hùng là cha của cụ Đức\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Relationship",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/relationships/{{relationshipId}}", "host": ["{{baseUrl}}"], "path": ["relationships", "{{relationshipId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Cập nhật chú thích\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Relationship",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/relationships/{{relationshipId}}", "host": ["{{baseUrl}}"], "path": ["relationships", "{{relationshipId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Recipes ⭐",
+      "item": [
+        {
+          "name": "List Recipes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families/{{familyId}}/recipes",
+              "host": ["{{baseUrl}}"],
+              "path": ["families", "{{familyId}}", "recipes"],
+              "query": [{ "key": "difficulty", "value": "EASY", "disabled": true }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var body = pm.response.json();",
+                  "  var items = body.items || body.recipes || [];",
+                  "  if (items.length > 0) {",
+                  "    pm.collectionVariables.set('recipeId', items[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Recipe (with genealogy)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/recipes", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "recipes"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bánh chưng làng Đông Ngạc\",\n  \"description\": \"Bánh chưng truyền thống 5 đời\",\n  \"story\": \"Cụ Đức sáng tạo năm 1880.\",\n  \"cuisineType\": \"Miền Bắc\",\n  \"difficulty\": \"HARD\",\n  \"prepTimeMinutes\": 240,\n  \"cookTimeMinutes\": 720,\n  \"servings\": 8,\n  \"instructions\": \"Ngâm gạo nếp qua đêm. Gói bánh bằng lá dong rửa sạch. Luộc liên tục 12 tiếng với lửa nhỏ.\",\n  \"imageUrl\": \"https://example.com/banh-chung.jpg\",\n  \"isPublic\": true,\n  \"ingredients\": [\n    { \"name\": \"Gạo nếp cái hoa vàng\", \"quantity\": 2, \"unit\": \"kg\", \"orderIndex\": 0 },\n    { \"name\": \"Đỗ xanh\", \"quantity\": 0.5, \"unit\": \"kg\", \"orderIndex\": 1 }\n  ],\n  \"steps\": [\n    { \"stepNumber\": 1, \"instruction\": \"Ngâm gạo nếp 8 tiếng\", \"durationMinutes\": 480 },\n    { \"stepNumber\": 2, \"instruction\": \"Vo và đãi gạo\", \"durationMinutes\": 30 }\n  ],\n  \"origins\": [\n    {\n      \"fromMemberId\": \"a0000001-0000-0000-0000-000000000001\",\n      \"toMemberId\": \"a0000003-0000-0000-0000-000000000003\",\n      \"yearTransmitted\": 1880,\n      \"generationGap\": 1,\n      \"story\": \"Cụ Hùng truyền lại cho cụ Đức.\"\n    }\n  ]\n}"
+            },
+            "description": "NOVEL: Creates a recipe with ingredients, steps, and the initial genealogy edges atomically."
+          }
+        },
+        {
+          "name": "Get Recipe Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}"] },
+            "description": "Returns recipe + author + ingredients + steps + origins + reactions + comments."
+          }
+        },
+        {
+          "name": "Update Recipe",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bánh chưng làng Đông Ngạc (cập nhật)\",\n  \"difficulty\": \"MEDIUM\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Recipe",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}"] }
+          }
+        },
+        {
+          "name": "Search Public Recipes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/recipes/public?sort=popular", "host": ["{{baseUrl}}"], "path": ["recipes", "public"], "query": [{ "key": "sort", "value": "popular" }] },
+            "description": "Public recipe search (no auth required)."
+          }
+        },
+        {
+          "name": "Add Origin (genealogy edge) ⭐",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}/origins", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}", "origins"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromMemberId\": \"a0000007-0000-0000-0000-000000000007\",\n  \"toMemberId\": \"a0000010-0000-0000-0000-000000000010\",\n  \"yearTransmitted\": 1960,\n  \"generationGap\": 1,\n  \"story\": \"Bà Hạnh truyền lại cho con dâu.\"\n}"
+            },
+            "description": "NOVEL: record who passed a recipe to whom."
+          }
+        },
+        {
+          "name": "List Origins",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}/origins", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}", "origins"] }
+          }
+        },
+        {
+          "name": "Get Genealogy Tree ⭐",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}/genealogy-tree", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}", "genealogy-tree"] },
+            "description": "NOVEL: returns the full nested genealogy tree (member → children → grandchildren → …) showing how the recipe travelled through the family."
+          }
+        },
+        {
+          "name": "Add Reaction",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}/reactions", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}", "reactions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reactionType\": \"LOVE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove Reaction",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}/reactions", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}", "reactions"] }
+          }
+        },
+        {
+          "name": "List Reactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}/reactions", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}", "reactions"] }
+          }
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}/comments", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}", "comments"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Công thức này ngon lắm!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Comments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/recipes/{{recipeId}}/comments", "host": ["{{baseUrl}}"], "path": ["recipes", "{{recipeId}}", "comments"] }
+          }
+        },
+        {
+          "name": "Update Comment",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/comments/{{commentId}}", "host": ["{{baseUrl}}"], "path": ["comments", "{{commentId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Cập nhật nội dung\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Comment",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/comments/{{commentId}}", "host": ["{{baseUrl}}"], "path": ["comments", "{{commentId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Stories",
+      "item": [
+        {
+          "name": "List Stories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/stories", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "stories"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var body = pm.response.json();",
+                  "  var stories = body.stories || body.items || [];",
+                  "  if (stories.length > 0) {",
+                  "    pm.collectionVariables.set('storyId', stories[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Story",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/stories", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "stories"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bà nội kể chuyện ngày Tết thời bao cấp\",\n  \"content\": \"Mùa xuân năm 1979, khi đất nước vừa thống nhất...\",\n  \"storyDate\": \"1979-02-08\",\n  \"storyLocation\": \"Làng Đông Ngạc, Hà Nội\",\n  \"isFeatured\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Story",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/stories/{{storyId}}", "host": ["{{baseUrl}}"], "path": ["stories", "{{storyId}}"] }
+          }
+        },
+        {
+          "name": "Update Story",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/stories/{{storyId}}", "host": ["{{baseUrl}}"], "path": ["stories", "{{storyId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isFeatured\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Story",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/stories/{{storyId}}", "host": ["{{baseUrl}}"], "path": ["stories", "{{storyId}}"] }
+          }
+        },
+        {
+          "name": "List Story Tags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/story-tags", "host": ["{{baseUrl}}"], "path": ["story-tags"] }
+          }
+        },
+        {
+          "name": "Create Story Tag",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/story-tags", "host": ["{{baseUrl}}"], "path": ["story-tags"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tết\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Time Capsules ⭐",
+      "item": [
+        {
+          "name": "List Time Capsules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families/{{familyId}}/time-capsules",
+              "host": ["{{baseUrl}}"],
+              "path": ["families", "{{familyId}}", "time-capsules"],
+              "query": [{ "key": "status", "value": "UNLOCKED", "disabled": true }]
+            },
+            "description": "content field is hidden from list responses when the capsule is LOCKED."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var body = pm.response.json();",
+                  "  var items = body.timeCapsules || body.items || [];",
+                  "  if (items.length > 0) {",
+                  "    pm.collectionVariables.set('timeCapsuleId', items[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Time Capsule",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/time-capsules", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "time-capsules"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lá thư cho cháu Mai 18 tuổi\",\n  \"content\": \"Mai yêu quý, khi con đọc được lá thư này thì con đã 18 tuổi...\",\n  \"recipientMemberId\": \"a0000016-0000-0000-0000-000000000016\",\n  \"unlockDate\": \"2033-06-20\",\n  \"unlockCondition\": \"DATE\"\n}"
+            },
+            "description": "NOVEL: create a sealed message addressed to a future family member."
+          }
+        },
+        {
+          "name": "Open Time Capsule ⭐",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/time-capsules/{{timeCapsuleId}}/open", "host": ["{{baseUrl}}"], "path": ["time-capsules", "{{timeCapsuleId}}", "open"] },
+            "description": "NOVEL: returns the content of the capsule (gated by unlock_date). 403 if locked."
+          }
+        },
+        {
+          "name": "Delete Time Capsule",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/time-capsules/{{timeCapsuleId}}", "host": ["{{baseUrl}}"], "path": ["time-capsules", "{{timeCapsuleId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Events",
+      "item": [
+        {
+          "name": "List Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families/{{familyId}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["families", "{{familyId}}", "events"],
+              "query": [{ "key": "upcoming", "value": "true", "disabled": true }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var body = pm.response.json();",
+                  "  var events = body.events || body.items || [];",
+                  "  if (events.length > 0) {",
+                  "    pm.collectionVariables.set('eventId', events[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/events", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "events"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Đám cưới cháu Mai\",\n  \"description\": \"Lễ cưới cháu Mai và con Tuấn tại nhà hàng Hà Nội.\",\n  \"eventType\": \"WEDDING\",\n  \"eventDate\": \"2026-11-15T17:00:00+07:00\",\n  \"endDate\": \"2026-11-15T23:00:00+07:00\",\n  \"location\": \"Nhà hàng Vạn Hoa, Hà Nội\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Event",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["events", "{{eventId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"Nhà hàng Vạn Hoa (sảnh A)\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Event",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["events", "{{eventId}}"] }
+          }
+        },
+        {
+          "name": "RSVP to Event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/events/{{eventId}}/rsvp", "host": ["{{baseUrl}}"], "path": ["events", "{{eventId}}", "rsvp"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"responses\": [\n    { \"memberId\": \"a0000010-0000-0000-0000-000000000010\", \"rsvpStatus\": \"GOING\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Add Event Photo",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/events/{{eventId}}/photos", "host": ["{{baseUrl}}"], "path": ["events", "{{eventId}}", "photos"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"photoUrl\": \"https://example.com/event-1.jpg\",\n  \"caption\": \"Cả nhà chụp ảnh chung\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Event Photos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/events/{{eventId}}/photos", "host": ["{{baseUrl}}"], "path": ["events", "{{eventId}}", "photos"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Photo Albums",
+      "item": [
+        {
+          "name": "List Albums",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/albums", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "albums"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var body = pm.response.json();",
+                  "  var albums = body.albums || body.items || [];",
+                  "  if (albums.length > 0) {",
+                  "    pm.collectionVariables.set('albumId', albums[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Album",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/albums", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "albums"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Đám cưới Mai 2026\",\n  \"description\": \"Ảnh kỷ niệm đám cưới cháu Mai\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Album Photos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/albums/{{albumId}}/photos", "host": ["{{baseUrl}}"], "path": ["albums", "{{albumId}}", "photos"] }
+          }
+        },
+        {
+          "name": "Add Photo to Album",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/albums/{{albumId}}/photos", "host": ["{{baseUrl}}"], "path": ["albums", "{{albumId}}", "photos"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"photoUrl\": \"https://example.com/album-1.jpg\",\n  \"caption\": \"Cả nhà chụp ảnh chung\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Chat",
+      "item": [
+        {
+          "name": "List Chats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/chats", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "chats"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var body = pm.response.json();",
+                  "  var chats = body.chats || body.items || [];",
+                  "  if (chats.length > 0) {",
+                  "    pm.collectionVariables.set('chatId', chats[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Chat",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/families/{{familyId}}/chats", "host": ["{{baseUrl}}"], "path": ["families", "{{familyId}}", "chats"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Reunion planning\",\n  \"type\": \"GROUP\",\n  \"memberIds\": [\"11111111-1111-1111-1111-111111111111\", \"22222222-2222-2222-2222-222222222222\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "List Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/chats/{{chatId}}/messages?limit=20", "host": ["{{baseUrl}}"], "path": ["chats", "{{chatId}}", "messages"], "query": [{ "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/chats/{{chatId}}/messages", "host": ["{{baseUrl}}"], "path": ["chats", "{{chatId}}", "messages"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Chào cả nhà, tối nay họp mặt nhé!\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/notifications?unreadOnly=false", "host": ["{{baseUrl}}"], "path": ["notifications"], "query": [{ "key": "unreadOnly", "value": "false" }] }
+          }
+        },
+        {
+          "name": "Mark One as Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/notifications/{{notificationId}}/read", "host": ["{{baseUrl}}"], "path": ["notifications", "{{notificationId}}", "read"] }
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["notifications", "read-all"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Achievements",
+      "item": [
+        {
+          "name": "List Achievement Catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/achievements", "host": ["{{baseUrl}}"], "path": ["achievements"] }
+          }
+        },
+        {
+          "name": "List Member Achievements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/members/{{memberId}}/achievements", "host": ["{{baseUrl}}"], "path": ["members", "{{memberId}}", "achievements"] }
+          }
+        },
+        {
+          "name": "Award Achievement",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/members/{{memberId}}/achievements", "host": ["{{baseUrl}}"], "path": ["members", "{{memberId}}", "achievements"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"achievementId\": \"<paste-from-catalog>\",\n  \"note\": \"Đã đóng góp 50+ ảnh vào album gia đình.\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+# Build output
+target/
+*.class
+*.jar
+*.war
+
+# Logs
+*.log
+logs/
+
+# Local environment
+.env
+.env.local
+
+# IDE - project-level only (the root .gitignore covers shared .idea/)
+*.iml
+.idea/workspace.xml
+.idea/tasks.xml
+
+# OS
+.DS_Store
+Thumbs.db

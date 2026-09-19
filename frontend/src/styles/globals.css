@@ -1,0 +1,5 @@
+/* This file is intentionally left as a placeholder.
+ * The canonical Tailwind entrypoint lives at `src/app/globals.css` and is
+ * imported by `src/app/layout.tsx`. Components should import styles from
+ * there (or rely on Tailwind utility classes).
+ */

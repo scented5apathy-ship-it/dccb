@@ -1,0 +1,118 @@
+# ========== Maven / Java (Backend) ==========
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.kotlin
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# ========== Node.js / Next.js (Frontend) ==========
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Testing
+coverage/
+.nyc_output/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Production
+*.tsbuildinfo
+next-env.d.ts
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Local env files
+.env*.local
+
+# Vercel
+.vercel
+
+# ========== IntelliJ IDEA ==========
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# ========== Eclipse ==========
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# ========== NetBeans ==========
+/nbproject/private/
+/nbbuild/
+/dist/
+/.nb-gradle/
+build/
+
+# ========== VS Code ==========
+.vscode/
+
+# ========== macOS ==========
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100.bin
+.TemporaryItems-V100.bin
+.fseventsd
+.fseventsd.bak
+
+# ========== Windows ==========
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ========== Logs (various) ==========
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ========== Runtime / Process files ==========
+.pid
+.seed
+.pid.lock
+
+# ========== Misc ==========
+.eslintcache
+.cache/
+.parcel-cache/
+.turbo/
+.vercel
+.history/

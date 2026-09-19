@@ -1,0 +1,113 @@
+package com.giapha.controller;
+
+import com.giapha.model.dto.common.MessageResponse;
+import com.giapha.model.dto.family.CreateInvitationRequest;
+import com.giapha.model.dto.family.InvitationDetailDto;
+import com.giapha.model.dto.family.InvitationResponse;
+import com.giapha.model.dto.member.CreateMemberRequest;
+import com.giapha.model.dto.member.MemberDto;
+import com.giapha.model.dto.member.MemberWithRelationships;
+import com.giapha.model.dto.member.UpdateMemberRequest;
+import com.giapha.security.CustomUserDetails;
+import com.giapha.service.FamilyMemberService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Endpoints for managing family members + invitations.
+ *
+ * <pre>
+ *  GET    /api/families/{familyId}/members              — list (with filters)
+ *  POST   /api/families/{familyId}/members              — add
+ *  POST   /api/families/{familyId}/invitations          — create invite (ADMIN)
+ *  GET    /api/families/{familyId}/invitations          — list invite history
+ *  DELETE /api/invitations/{invitationId}               — revoke (ADMIN)
+ *  GET    /api/members/{memberId}                       — detail
+ *  PUT    /api/members/{memberId}                       — update
+ *  DELETE /api/members/{memberId}                       — delete
+ * </pre>
+ */
+@RestController
+@RequiredArgsConstructor
+public class FamilyMemberController {
+
+    private final FamilyMemberService memberService;
+
+    @GetMapping("/families/{familyId}/members")
+    public ResponseEntity<Map<String, Object>> listMembers(
+            @PathVariable UUID familyId,
+            @RequestParam(value = "generationId", required = false) UUID generationId,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "aliveOnly", required = false) Boolean aliveOnly,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        List<MemberWithRelationships> data =
+            memberService.listMembers(familyId, generationId, search, aliveOnly, currentUser.getUser());
+        return ResponseEntity.ok(Map.of("members", data));
+    }
+
+    @PostMapping("/families/{familyId}/members")
+    public ResponseEntity<Map<String, Object>> addMember(
+            @PathVariable UUID familyId,
+            @Valid @RequestBody CreateMemberRequest req,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        MemberDto member = memberService.addMember(familyId, req, currentUser.getUser());
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("member", member));
+    }
+
+    @PostMapping("/families/{familyId}/invitations")
+    public ResponseEntity<Map<String, Object>> createInvitation(
+            @PathVariable UUID familyId,
+            @Valid @RequestBody CreateInvitationRequest req,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        InvitationResponse inv = memberService.createInvitation(familyId, req, currentUser.getUser());
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("invitation", inv));
+    }
+
+    @GetMapping("/families/{familyId}/invitations")
+    public ResponseEntity<Map<String, Object>> listInvitations(
+            @PathVariable UUID familyId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        List<InvitationDetailDto> data =
+            memberService.listInvitations(familyId, currentUser.getUser());
+        return ResponseEntity.ok(Map.of("invitations", data));
+    }
+
+    @DeleteMapping("/invitations/{invitationId}")
+    public ResponseEntity<MessageResponse> revokeInvitation(
+            @PathVariable UUID invitationId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ResponseEntity.ok(
+            memberService.revokeInvitation(invitationId, currentUser.getUser()));
+    }
+
+    @GetMapping("/members/{memberId}")
+    public ResponseEntity<MemberWithRelationships> getMember(
+            @PathVariable UUID memberId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ResponseEntity.ok(memberService.getMember(memberId, currentUser.getUser()));
+    }
+
+    @PutMapping("/members/{memberId}")
+    public ResponseEntity<Map<String, Object>> updateMember(
+            @PathVariable UUID memberId,
+            @Valid @RequestBody UpdateMemberRequest req,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        MemberDto m = memberService.updateMember(memberId, req, currentUser.getUser());
+        return ResponseEntity.ok(Map.of("member", m));
+    }
+
+    @DeleteMapping("/members/{memberId}")
+    public ResponseEntity<MessageResponse> deleteMember(
+            @PathVariable UUID memberId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ResponseEntity.ok(memberService.deleteMember(memberId, currentUser.getUser()));
+    }
+}
