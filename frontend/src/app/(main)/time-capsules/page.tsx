@@ -39,16 +39,18 @@ export default function TimeCapsulesPage() {
     useState<ListTimeCapsulesParams['status']>(undefined);
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<TimeCapsuleEntry | null>(null);
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string | undefined>();
 
-  // Fetch user's families to pick the first one for the demo (this is the
-  // global page; in a real multi-family product we'd let the user choose).
+  // Fetch user's families. Defensive: tolerate non-array `families`.
   const familiesQuery = useQuery({
     queryKey: ['families', 'list'],
     queryFn: () => familyApi.list(),
     enabled: Boolean(user),
   });
-
-  const familyId = familiesQuery.data?.families?.[0]?.family?.id;
+  const families = Array.isArray(familiesQuery.data?.families)
+    ? familiesQuery.data!.families
+    : [];
+  const familyId = selectedFamilyId ?? families[0]?.family?.id;
 
   // Always fetch the unfiltered list so the filter chips can show
   // accurate counts for every status at the same time.
@@ -89,20 +91,36 @@ export default function TimeCapsulesPage() {
             biệt trong tương lai.
           </p>
         </div>
-        {familyId ? (
-          <Button
-            leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => setCreateOpen(true)}
-          >
-            Tạo hộp thời gian
-          </Button>
-        ) : (
-          <Link href="/families/new">
-            <Button leftIcon={<Home className="h-4 w-4" />} variant="outline">
-              Tạo gia đình để bắt đầu
+        <div className="flex flex-wrap items-center gap-2">
+          {families.length > 1 && (
+            <select
+              value={familyId ?? ''}
+              onChange={(e) => setSelectedFamilyId(e.target.value || undefined)}
+              className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
+              aria-label="Chọn gia đình"
+            >
+              {families.map((f) => (
+                <option key={f.family.id} value={f.family.id}>
+                  {f.family.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {familyId ? (
+            <Button
+              leftIcon={<Plus className="h-4 w-4" />}
+              onClick={() => setCreateOpen(true)}
+            >
+              Tạo hộp thời gian
             </Button>
-          </Link>
-        )}
+          ) : (
+            <Link href="/families/new">
+              <Button leftIcon={<Home className="h-4 w-4" />} variant="outline">
+                Tạo gia đình để bắt đầu
+              </Button>
+            </Link>
+          )}
+        </div>
       </header>
 
       <Card padding="sm">
