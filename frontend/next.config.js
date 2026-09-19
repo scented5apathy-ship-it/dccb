@@ -12,6 +12,14 @@ const nextConfig = {
         hostname: 'api.dicebear.com',
       },
       {
+        // Pravatar — fallback avatars for seeded users.
+        protocol: 'https',
+        hostname: 'i.pravatar.cc',
+      },
+      {
+        // QR codes are now generated locally with the `qrcode` npm package
+        // and rendered as inline SVG, so no external image host is needed.
+        // (api.qrserver.com intentionally removed — see components/ui/QrCode.tsx.)
         protocol: 'http',
         hostname: 'localhost',
       },
