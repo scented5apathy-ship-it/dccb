@@ -25,7 +25,10 @@ apiClient.interceptors.request.use(
   (error: AxiosError) => Promise.reject(error)
 );
 
-// Response interceptor: handle 401 errors globally
+// Response interceptor: handle 401 errors globally and surface the backend's
+// `message` field as the AxiosError's `message` so downstream `catch`
+// handlers that do `err.message` actually see the user-facing reason instead
+// of the generic "Request failed with status code NNN" axios string.
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiError>) => {
@@ -37,6 +40,19 @@ apiClient.interceptors.response.use(
         if (!currentPath.startsWith('/login')) {
           window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
         }
+      }
+    }
+    // Prefer the backend's structured message over axios's default string.
+    const backendMsg = error.response?.data?.message;
+    if (backendMsg && typeof backendMsg === 'string') {
+      // Replace `message` so `err.message` reflects the real reason.
+      try {
+        // Mutating the message is the only field axios exposes for surfaced errors.
+        error.message = backendMsg;
+      } catch {
+        // Some axios builds make `message` non-writable; fall back to attaching
+        // a custom field consumers can opt into.
+        (error as AxiosError & { backendMessage?: string }).backendMessage = backendMsg;
       }
     }
     return Promise.reject(error);
