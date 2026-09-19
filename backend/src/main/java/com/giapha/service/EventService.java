@@ -47,16 +47,22 @@ public class EventService {
             int attendeeCount = eventRepository.countAttendees(e.getId());
             int goingCount = eventRepository.countAttendeesByStatus(e.getId(), "GOING");
             User creator = userRepository.findById(e.getCreatorId()).orElse(null);
-            items.add(Map.of(
-                "event", e,
-                "creator", creator == null ? null : Map.of(
-                    "id", creator.getId(),
-                    "fullName", creator.getFullName(),
-                    "avatarUrl", creator.getAvatarUrl()
-                ),
-                "attendeeCount", attendeeCount,
-                "goingCount", goingCount
-            ));
+            // Use LinkedHashMap (not Map.of) so that null fields on the creator
+            // (e.g. avatarUrl or fullName on a freshly-registered user) don't
+            // throw NullPointerException.
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("event", e);
+            Map<String, Object> creatorInfo = null;
+            if (creator != null) {
+                creatorInfo = new LinkedHashMap<>();
+                creatorInfo.put("id", creator.getId());
+                creatorInfo.put("fullName", creator.getFullName());
+                creatorInfo.put("avatarUrl", creator.getAvatarUrl());
+            }
+            item.put("creator", creatorInfo);
+            item.put("attendeeCount", attendeeCount);
+            item.put("goingCount", goingCount);
+            items.add(item);
         }
 
         Map<String, Object> out = new LinkedHashMap<>();
@@ -103,6 +109,38 @@ public class EventService {
         Event saved = eventRepository.findById(eventId).orElseThrow();
         List<EventAttendee> attendees = attendeeRepository.listByEvent(eventId);
         return Map.of("event", saved, "attendees", attendees);
+    }
+
+    /**
+     * Fetch a single event with hydrated creator + attendees + photos.
+     * Used by the event detail page (`/events/{id}`).
+     */
+    public Map<String, Object> get(UUID eventId) {
+        Event e = eventRepository.findById(eventId)
+            .orElseThrow(() -> new ResourceNotFoundException("Event", eventId.toString()));
+        UUID userId = currentUser.getCurrentUserId();
+        authz.requireFamilyMember(userId, e.getFamilyId());
+
+        User creator = userRepository.findById(e.getCreatorId()).orElse(null);
+        List<EventAttendee> attendees = attendeeRepository.listByEvent(eventId);
+
+        // Use LinkedHashMap so null avatarUrl/fullName doesn't NPE.
+        Map<String, Object> creatorInfo = null;
+        if (creator != null) {
+            creatorInfo = new LinkedHashMap<>();
+            creatorInfo.put("id", creator.getId());
+            creatorInfo.put("fullName", creator.getFullName());
+            creatorInfo.put("avatarUrl", creator.getAvatarUrl());
+        }
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("event", e);
+        out.put("creator", creatorInfo);
+        out.put("attendees", attendees);
+        out.put("attendeeCount", attendees.size());
+        out.put("goingCount", attendees.stream()
+            .filter(a -> "GOING".equals(a.getRsvpStatus())).count());
+        return out;
     }
 
     @Transactional

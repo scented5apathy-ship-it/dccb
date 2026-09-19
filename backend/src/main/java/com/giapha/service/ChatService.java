@@ -114,12 +114,18 @@ public class ChatService {
             ChatMessage reply = m.getReplyToMessageId() == null ? null : replies.get(m.getReplyToMessageId());
             // Use LinkedHashMap (not Map.of) so that null values — e.g. sender
             // for a deleted user, or replyTo when the parent was deleted — don't
-            // throw NullPointerException.
+            // throw NullPointerException. Also, nested Map.of for sender would
+            // NPE if user.fullName or user.avatarUrl is null.
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("message", m);
-            item.put("sender", sender == null ? null : Map.of(
-                "id", sender.getId(), "fullName", sender.getFullName(), "avatarUrl", sender.getAvatarUrl()
-            ));
+            Map<String, Object> senderInfo = null;
+            if (sender != null) {
+                senderInfo = new LinkedHashMap<>();
+                senderInfo.put("id", sender.getId());
+                senderInfo.put("fullName", sender.getFullName());
+                senderInfo.put("avatarUrl", sender.getAvatarUrl());
+            }
+            item.put("sender", senderInfo);
             item.put("replyTo", reply);
             items.add(item);
         }
@@ -167,11 +173,18 @@ public class ChatService {
         ChatMessage reply = req.getReplyToMessageId() == null
             ? null : messageRepository.findById(req.getReplyToMessageId());
 
+        // Use LinkedHashMap (not Map.of) so that null fields like fullName or
+        // avatarUrl on a freshly-created user don't throw NullPointerException.
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("message", saved);
-        out.put("sender", sender == null ? null : Map.of(
-            "id", sender.getId(), "fullName", sender.getFullName(), "avatarUrl", sender.getAvatarUrl()
-        ));
+        Map<String, Object> senderInfo = null;
+        if (sender != null) {
+            senderInfo = new LinkedHashMap<>();
+            senderInfo.put("id", sender.getId());
+            senderInfo.put("fullName", sender.getFullName());
+            senderInfo.put("avatarUrl", sender.getAvatarUrl());
+        }
+        out.put("sender", senderInfo);
         out.put("replyTo", reply);
         return out;
     }
