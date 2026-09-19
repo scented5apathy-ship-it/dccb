@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -26,9 +26,11 @@ import {
   useCreateMember,
   useDeleteMember,
   useUpdateMember,
+  useUpdateMemberRole,
 } from '@/hooks/useMembers';
-import { useFamilyMembers } from '@/hooks/useFamily';
+import { useFamily, useFamilyMembers } from '@/hooks/useFamily';
 import { useGenerations } from '@/hooks/useGenerations';
+import { memberApi } from '@/lib/api-client';
 import { showToast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { formatDate } from '@/lib/utils';
@@ -64,10 +66,67 @@ export default function FamilyMembersPage({ params }: PageProps) {
 
   const { data, isLoading, isError, error } = useFamilyMembers(familyId, filters);
   const { data: generationsData } = useGenerations(familyId);
+  const { data: familyData } = useFamily(familyId);
   const deleteMutation = useDeleteMember();
   const updateMutation = useUpdateMember();
+  const updateRoleMutation = useUpdateMemberRole();
+
+  // Only ADMINs can change another member's role. The family creator is
+  // always ADMIN (server-enforced); the role check here is just for the UI.
+  const currentUserRole = (familyData?.role ?? '').toUpperCase();
+  const isCurrentUserAdmin = currentUserRole === 'ADMIN';
 
   const members = useMemo(() => data?.members ?? [], [data?.members]);
+
+  // Per-member roles, fetched lazily for members that have a linked user.
+  // The creator's role is hard-coded to ADMIN (server enforces this).
+  const [memberRoles, setMemberRoles] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    // Fetch each member's role in parallel. Small families (<= a few dozen
+    // members) make this cheap; if it ever grows we can switch to a single
+    // batch endpoint.
+    const fid = familyData?.family.id;
+    if (!fid || !isCurrentUserAdmin) return;
+    let cancelled = false;
+    const linked = members.filter((m) => Boolean(m.member.userId));
+    Promise.all(
+      linked.map(async (m) => {
+        try {
+          const { role } = await memberApi.getRole(fid, m.member.id);
+          return [m.member.id, role ?? 'MEMBER'] as const;
+        } catch {
+          return [m.member.id, 'MEMBER'] as const;
+        }
+      })
+    ).then((entries) => {
+      if (cancelled) return;
+      setMemberRoles(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [members, familyData?.family.id, isCurrentUserAdmin]);
+
+  const handleChangeRole = async (
+    memberId: string,
+    newRole: string
+  ): Promise<void> => {
+    if (!['ADMIN', 'EDITOR', 'VIEWER'].includes(newRole)) return;
+    try {
+      await updateRoleMutation.mutateAsync({
+        familyId,
+        memberId,
+        role: newRole as 'ADMIN' | 'EDITOR' | 'VIEWER',
+      });
+      setMemberRoles((prev) => ({ ...prev, [memberId]: newRole }));
+      showToast.success('Đã cập nhật vai trò');
+    } catch (err) {
+      showToast.error(
+        err instanceof Error ? err.message : 'Không thể cập nhật vai trò'
+      );
+    }
+  };
 
   const grouped = useMemo(() => {
     const map = new Map<string, MemberWithRelationships[]>();
@@ -224,14 +283,33 @@ export default function FamilyMembersPage({ params }: PageProps) {
                 </span>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {list.map((m) => (
-                  <MemberItem
-                    key={m.member.id}
-                    member={m.member}
-                    onEdit={() => setEditing(m.member)}
-                    onDelete={() => setDeleteId(m.member.id)}
-                  />
-                ))}
+                {list.map((m) => {
+                  const isMemberCreator =
+                    Boolean(m.member.userId) &&
+                    m.member.userId === familyData?.family.createdBy;
+                  return (
+                    <MemberItem
+                      key={m.member.id}
+                      member={m.member}
+                      currentRole={
+                        isMemberCreator
+                          ? 'ADMIN'
+                          : (memberRoles[m.member.id] ?? null)
+                      }
+                      canEditRole={isCurrentUserAdmin && Boolean(m.member.userId)}
+                      isCreator={isMemberCreator}
+                      isUpdatingRole={
+                        updateRoleMutation.isPending &&
+                        updateRoleMutation.variables?.memberId === m.member.id
+                      }
+                      onEdit={() => setEditing(m.member)}
+                      onDelete={() => setDeleteId(m.member.id)}
+                      onChangeRole={(newRole) =>
+                        void handleChangeRole(m.member.id, newRole)
+                      }
+                    />
+                  );
+                })}
               </div>
             </section>
           ))}
@@ -280,11 +358,37 @@ export default function FamilyMembersPage({ params }: PageProps) {
 
 interface MemberItemProps {
   member: FamilyMember;
+  currentRole?: string | null;
+  canEditRole: boolean;
+  isCreator: boolean;
+  isUpdatingRole: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onChangeRole: (newRole: string) => void;
 }
 
-function MemberItem({ member: m, onEdit, onDelete }: MemberItemProps) {
+function MemberItem({
+  member: m,
+  currentRole,
+  canEditRole,
+  isCreator,
+  onEdit,
+  onDelete,
+  onChangeRole,
+  isUpdatingRole,
+}: MemberItemProps) {
+  const roleLabel: Record<string, string> = {
+    ADMIN: 'Quản trị viên',
+    EDITOR: 'Biên tập viên',
+    VIEWER: 'Người xem',
+    MEMBER: 'Thành viên',
+  };
+  const roleTone =
+    currentRole === 'ADMIN'
+      ? 'success'
+      : currentRole === 'EDITOR'
+        ? 'primary'
+        : 'default';
   return (
     <Card padding="md" className="border border-neutral-100">
       <div className="flex items-start gap-3">
@@ -318,7 +422,38 @@ function MemberItem({ member: m, onEdit, onDelete }: MemberItemProps) {
                 {m.gender}
               </Badge>
             )}
+            {currentRole && (
+              <Badge variant={roleTone as never} size="sm">
+                {roleLabel[currentRole] ?? currentRole}
+              </Badge>
+            )}
           </div>
+          {canEditRole && (
+            <div className="mt-2 flex items-center gap-2">
+              <label className="text-xs text-neutral-500">Vai trò:</label>
+              <select
+                value={currentRole ?? ''}
+                disabled={isCreator || isUpdatingRole}
+                onChange={(e) => onChangeRole(e.target.value)}
+                className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label={`Đổi vai trò cho ${m.fullName}`}
+              >
+                {!currentRole && (
+                  <option value="" disabled>
+                    — chọn —
+                  </option>
+                )}
+                <option value="ADMIN">Quản trị viên</option>
+                <option value="EDITOR">Biên tập viên</option>
+                <option value="VIEWER">Người xem</option>
+              </select>
+              {isCreator && (
+                <span className="text-[10px] text-neutral-400">
+                  Không thể đổi vai trò của người tạo
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex shrink-0 flex-col gap-1">
           <button

@@ -152,5 +152,26 @@ export function useRevokeInvitation(): UseMutationResult<
   });
 }
 
+export function useUpdateMemberRole(): UseMutationResult<
+  MemberResponse,
+  Error,
+  { familyId: string; memberId: string; role: 'ADMIN' | 'EDITOR' | 'VIEWER' }
+> {
+  const queryClient = useQueryClient();
+  return useMutation<
+    MemberResponse,
+    Error,
+    { familyId: string; memberId: string; role: 'ADMIN' | 'EDITOR' | 'VIEWER' }
+  >({
+    mutationFn: ({ familyId, memberId, role }) =>
+      memberApi.updateRole(familyId, memberId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MEMBER_KEY });
+      queryClient.invalidateQueries({ queryKey: ['families'] });
+      queryClient.invalidateQueries({ queryKey: ['invitations'] });
+    },
+  });
+}
+
 // Re-export so callers can `import { useFamilyMembers } from '@/hooks/useMembers'`.
 export { useFamilyMembers } from './useFamily';
