@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -23,6 +23,8 @@ import {
   Copy,
   Check,
   X,
+  Download,
+  ImageDown,
   QrCode as QrCodeIcon,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -34,6 +36,7 @@ import { LoadingState } from '@/components/shared/LoadingState';
 import { useFamily, useUpdateFamily, useFamilyMembers } from '@/hooks/useFamily';
 import { useGenerations } from '@/hooks/useGenerations';
 import { useCreateInvitation } from '@/hooks/useMembers';
+import { useAuth } from '@/hooks/useAuth';
 import { useRecipes } from '@/hooks/useRecipes';
 import { useStories } from '@/hooks/useStories';
 import { useEvents } from '@/hooks/useEvents';
@@ -43,6 +46,7 @@ import { formatDate } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
+import { QrCode, downloadNodeAsPng, downloadQrPng } from '@/components/ui/QrCode';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -82,6 +86,7 @@ interface FamilyDetailPageProps {
 
 export default function FamilyDetailPage({ params }: FamilyDetailPageProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const { data, isLoading, isError, error } = useFamily(params.id);
   const { data: generations } = useGenerations(params.id);
   const [tab, setTab] = useState<TabKey>('overview');
@@ -285,6 +290,8 @@ export default function FamilyDetailPage({ params }: FamilyDetailPageProps) {
       <InviteSuccessModal
         invite={createdInvite}
         onClose={() => setCreatedInvite(null)}
+        familyName={family.name}
+        inviterName={user?.fullName}
       />
     </div>
   );
@@ -866,10 +873,18 @@ function InviteMemberModal({ open, onClose, familyId, onSuccess }: InviteMemberM
 interface InviteSuccessModalProps {
   invite: { inviteCode: string; inviteUrl: string; expiresAt: string } | null;
   onClose: () => void;
+  familyName?: string;
+  inviterName?: string;
 }
 
-function InviteSuccessModal({ invite, onClose }: InviteSuccessModalProps) {
+function InviteSuccessModal({
+  invite,
+  onClose,
+  familyName,
+  inviterName,
+}: InviteSuccessModalProps) {
   const [copied, setCopied] = useState<'code' | 'url' | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   if (!invite) return null;
 
@@ -893,6 +908,30 @@ function InviteSuccessModal({ invite, onClose }: InviteSuccessModalProps) {
     }
   };
 
+  const handleDownloadCard = async () => {
+    const node = cardRef.current;
+    if (!node) return;
+    try {
+      await downloadNodeAsPng(node, `thiep-moi-${invite.inviteCode}.png`);
+      showToast.success('Đã tải thiệp mời về máy');
+    } catch (err) {
+      showToast.error(
+        err instanceof Error ? err.message : 'Không thể tải thiệp'
+      );
+    }
+  };
+
+  const handleDownloadQrOnly = async () => {
+    try {
+      await downloadQrPng(invite.inviteUrl, `qr-${invite.inviteCode}.png`);
+      showToast.success('Đã tải QR về máy');
+    } catch (err) {
+      showToast.error(
+        err instanceof Error ? err.message : 'Không thể tải QR'
+      );
+    }
+  };
+
   return (
     <Modal
       open={true}
@@ -902,57 +941,107 @@ function InviteSuccessModal({ invite, onClose }: InviteSuccessModalProps) {
       size="md"
     >
       <div className="space-y-5">
-        {/* QR Code */}
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-neutral-200 bg-gradient-to-br from-amber-50 via-white to-rose-50 p-5">
-          <div className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-neutral-200">
-            {/* QR generated via api.qrserver.com (free public service, no API key) */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(invite.inviteUrl)}`}
-              alt={`QR code for invite ${invite.inviteCode}`}
-              width={180}
-              height={180}
-              className="h-[180px] w-[180px]"
-            />
+        {/* Self-contained invitation card — what gets exported as a single
+            PNG when the user clicks "Tải thiệp mời". */}
+        <div
+          ref={cardRef}
+          className="space-y-4 rounded-2xl border border-neutral-200 p-5 shadow-sm"
+          style={{
+            background:
+              'linear-gradient(135deg, #fffbeb 0%, #ffffff 50%, #fff1f2 100%)',
+          }}
+        >
+          <div className="text-center">
+            <p className="text-xs font-medium uppercase tracking-widest text-amber-700">
+              Lời mời tham gia gia đình
+            </p>
+            {familyName && (
+              <h2 className="mt-1 font-serif text-2xl font-semibold text-neutral-900">
+                {familyName}
+              </h2>
+            )}
+            {inviterName && (
+              <p className="mt-1 text-sm text-neutral-600">
+                Mời bởi <span className="font-medium">{inviterName}</span>
+              </p>
+            )}
           </div>
-          <p className="flex items-center gap-1 text-center text-xs text-neutral-500">
-            <QrCodeIcon className="h-3 w-3" />
-            Quét QR để vào nhóm ngay — không cần nhập tay
+
+          <div className="flex justify-center">
+            <div className="rounded-xl bg-white p-3 shadow ring-1 ring-neutral-200">
+              <QrCode
+                value={invite.inviteUrl}
+                size={200}
+                ariaLabel={`QR code cho lời mời ${invite.inviteCode}`}
+              />
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-1 text-center text-xs font-medium uppercase tracking-wider text-neutral-500">
+              Mã mời
+            </p>
+            <div className="select-all rounded-lg border-2 border-dashed border-neutral-300 bg-white px-3 py-3 text-center font-mono text-2xl font-bold tracking-[0.35em] text-neutral-900">
+              {invite.inviteCode}
+            </div>
+          </div>
+
+          <p className="break-all text-center font-mono text-[11px] text-neutral-400">
+            {invite.inviteUrl}
+          </p>
+
+          <p className="text-center text-xs text-amber-800">
+            Hết hạn: {expires.toLocaleString('vi-VN')} · Mã dùng một lần
           </p>
         </div>
 
-        {/* Invite Code */}
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-            Mã mời
-          </label>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 select-all rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2.5 font-mono text-lg font-semibold tracking-widest text-neutral-900">
-              {invite.inviteCode}
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => handleCopy(invite.inviteCode, 'code')}
-              leftIcon={
-                copied === 'code' ? (
-                  <Check className="h-4 w-4 text-emerald-600" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )
-              }
-            >
-              {copied === 'code' ? 'Đã sao chép' : 'Sao chép'}
-            </Button>
-          </div>
-        </div>
+        {/* Click-to-copy invite code (n+1 copy affordances for the same
+            value so muscle memory works no matter where the user clicks). */}
+        <button
+          type="button"
+          onClick={() => handleCopy(invite.inviteCode, 'code')}
+          className="group flex w-full items-center gap-2 rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2.5 text-left transition-colors hover:border-primary-300 hover:bg-primary-50"
+          aria-label="Click để sao chép mã mời"
+        >
+          <span className="flex-1 text-center font-mono text-lg font-semibold tracking-widest text-neutral-900">
+            {invite.inviteCode}
+          </span>
+          <span
+            className={`flex items-center gap-1 text-xs font-medium ${
+              copied === 'code'
+                ? 'text-emerald-600'
+                : 'text-neutral-500 group-hover:text-primary-600'
+            }`}
+          >
+            {copied === 'code' ? (
+              <>
+                <Check className="h-3.5 w-3.5" /> Đã sao chép
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5" /> Sao chép
+              </>
+            )}
+          </span>
+        </button>
 
-        {/* Invite URL */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-neutral-700">
             Hoặc chia sẻ đường dẫn
           </label>
           <div className="flex items-center gap-2">
-            <div className="flex-1 truncate rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
+            <div
+              className="flex-1 cursor-pointer truncate rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+              onClick={() => handleCopy(invite.inviteUrl, 'url')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleCopy(invite.inviteUrl, 'url');
+                }
+              }}
+            >
               {invite.inviteUrl}
             </div>
             <Button
@@ -972,13 +1061,23 @@ function InviteSuccessModal({ invite, onClose }: InviteSuccessModalProps) {
           </div>
         </div>
 
-        {/* Expiry */}
-        <div className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <span>
-            <Clock className="mr-1 inline h-3.5 w-3.5" />
-            Hết hạn: {expires.toLocaleString('vi-VN')}
-          </span>
-          <span className="font-medium">Mã dùng một lần</span>
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadQrOnly}
+            leftIcon={<Download className="h-3.5 w-3.5" />}
+          >
+            Tải QR
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleDownloadCard}
+            leftIcon={<ImageDown className="h-3.5 w-3.5" />}
+          >
+            Tải thiệp mời
+          </Button>
         </div>
       </div>
     </Modal>
