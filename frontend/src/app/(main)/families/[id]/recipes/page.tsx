@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
 import { useFamily, useFamilyMembers } from '@/hooks/useFamily';
+import { usePermission } from '@/hooks/usePermission';
 import { useRecipes } from '@/hooks/useRecipes';
 import type { RecipeWithStats } from '@/types/recipe';
 
@@ -40,6 +41,8 @@ export default function FamilyRecipesPage({ params }: PageProps) {
 
   const { data, isLoading } = useRecipes(familyId, filters);
   const recipes: RecipeWithStats[] = data?.recipes ?? [];
+  const { isEditor } = usePermission(familyId);
+  const canCreateRecipe = isEditor;
 
   return (
     <div className="space-y-6">
@@ -57,9 +60,11 @@ export default function FamilyRecipesPage({ params }: PageProps) {
             </p>
           )}
         </div>
+        {canCreateRecipe && (
         <Link href={`/recipes/new?familyId=${familyId}`}>
           <Button leftIcon={<Plus className="h-4 w-4" />}>Tạo công thức</Button>
         </Link>
+        )}
       </header>
 
       <Card padding="md">
@@ -118,9 +123,11 @@ export default function FamilyRecipesPage({ params }: PageProps) {
             title="Chưa có công thức nào trong gia đình này"
             description="Hãy là người đầu tiên chia sẻ công thức của dòng họ."
             action={
+              canCreateRecipe ? (
               <Link href={`/recipes/new?familyId=${familyId}`}>
                 <Button leftIcon={<Plus className="h-4 w-4" />}>Tạo công thức</Button>
               </Link>
+              ) : undefined
             }
           />
         </Card>

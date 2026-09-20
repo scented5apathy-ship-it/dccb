@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { useFamily } from '@/hooks/useFamily';
+import { usePermission } from '@/hooks/usePermission';
 import { useStories } from '@/hooks/useStories';
 
 interface PageProps {
@@ -34,6 +35,8 @@ export default function FamilyStoriesPage({ params }: PageProps) {
 
   const { data, isLoading } = useStories(familyId, filters);
   const items = data?.stories ?? [];
+  const { isEditor } = usePermission(familyId);
+  const canCreateStory = isEditor;
 
   return (
     <div className="space-y-6">
@@ -49,9 +52,11 @@ export default function FamilyStoriesPage({ params }: PageProps) {
             Kho tàng ký ức và câu chuyện truyền dạy của gia đình.
           </p>
         </div>
+        {canCreateStory && (
         <Link href={`/stories/new?familyId=${familyId}`}>
           <Button leftIcon={<Plus className="h-4 w-4" />}>Viết câu chuyện</Button>
         </Link>
+        )}
       </header>
 
       <Card padding="md">
@@ -91,9 +96,11 @@ export default function FamilyStoriesPage({ params }: PageProps) {
             title="Chưa có câu chuyện nào"
             description="Hãy chia sẻ những kỷ niệm đáng nhớ của gia đình bạn."
             action={
+              canCreateStory ? (
               <Link href={`/stories/new?familyId=${familyId}`}>
                 <Button leftIcon={<Plus className="h-4 w-4" />}>Viết câu chuyện</Button>
               </Link>
+              ) : undefined
             }
           />
         </Card>

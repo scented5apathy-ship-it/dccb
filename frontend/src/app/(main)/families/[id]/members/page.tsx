@@ -34,6 +34,7 @@ import { memberApi } from '@/lib/api-client';
 import { showToast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { formatDate } from '@/lib/utils';
+import { usePermission } from '@/hooks/usePermission';
 import type {
   CreateMemberRequest,
   FamilyMember,
@@ -70,11 +71,16 @@ export default function FamilyMembersPage({ params }: PageProps) {
   const deleteMutation = useDeleteMember();
   const updateMutation = useUpdateMember();
   const updateRoleMutation = useUpdateMemberRole();
+  const { isAdmin, isEditor, canEditFamily, canManageMembers } = usePermission(familyId);
 
   // Only ADMINs can change another member's role. The family creator is
   // always ADMIN (server-enforced); the role check here is just for the UI.
   const currentUserRole = (familyData?.role ?? '').toUpperCase();
   const isCurrentUserAdmin = currentUserRole === 'ADMIN';
+  // Editor+ can create/edit members; only ADMIN can delete or change roles.
+  const canCreateMember = isEditor;
+  const canEditMember = isEditor;
+  const canDeleteMember = canEditFamily;
 
   const members = useMemo(() => data?.members ?? [], [data?.members]);
 
@@ -180,6 +186,7 @@ export default function FamilyMembersPage({ params }: PageProps) {
           variant="primary"
           leftIcon={<UserPlus className="h-4 w-4" />}
           onClick={() => setAddOpen(true)}
+          hidden={!canCreateMember}
         >
           Thêm thành viên
         </Button>
@@ -258,6 +265,7 @@ export default function FamilyMembersPage({ params }: PageProps) {
             title="Chưa có thành viên nào"
             description="Hãy thêm thành viên đầu tiên cho gia đình bạn."
             action={
+              canCreateMember ? (
               <Button
                 variant="primary"
                 leftIcon={<UserPlus className="h-4 w-4" />}
@@ -265,6 +273,7 @@ export default function FamilyMembersPage({ params }: PageProps) {
               >
                 Thêm thành viên
               </Button>
+              ) : undefined
             }
           />
         </Card>
@@ -302,10 +311,12 @@ export default function FamilyMembersPage({ params }: PageProps) {
                         updateRoleMutation.isPending &&
                         updateRoleMutation.variables?.memberId === m.member.id
                       }
-                      onEdit={() => setEditing(m.member)}
-                      onDelete={() => setDeleteId(m.member.id)}
-                      onChangeRole={(newRole) =>
-                        void handleChangeRole(m.member.id, newRole)
+                      onEdit={canEditMember ? () => setEditing(m.member) : undefined}
+                      onDelete={canDeleteMember ? () => setDeleteId(m.member.id) : undefined}
+                      onChangeRole={
+                        canManageMembers
+                          ? (newRole) => void handleChangeRole(m.member.id, newRole)
+                          : undefined
                       }
                     />
                   );
@@ -362,9 +373,9 @@ interface MemberItemProps {
   canEditRole: boolean;
   isCreator: boolean;
   isUpdatingRole: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  onChangeRole: (newRole: string) => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onChangeRole?: (newRole: string) => void;
 }
 
 function MemberItem({
@@ -434,7 +445,7 @@ function MemberItem({
               <select
                 value={currentRole ?? ''}
                 disabled={isCreator || isUpdatingRole}
-                onChange={(e) => onChangeRole(e.target.value)}
+                onChange={(e) => onChangeRole?.(e.target.value)}
                 className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label={`Đổi vai trò cho ${m.fullName}`}
               >
@@ -456,6 +467,7 @@ function MemberItem({
           )}
         </div>
         <div className="flex shrink-0 flex-col gap-1">
+          {onEdit && (
           <button
             type="button"
             onClick={onEdit}
@@ -464,6 +476,8 @@ function MemberItem({
           >
             <Pencil className="h-4 w-4" />
           </button>
+          )}
+          {onDelete && (
           <button
             type="button"
             onClick={onDelete}
@@ -472,6 +486,7 @@ function MemberItem({
           >
             <Trash2 className="h-4 w-4" />
           </button>
+          )}
         </div>
       </div>
     </Card>

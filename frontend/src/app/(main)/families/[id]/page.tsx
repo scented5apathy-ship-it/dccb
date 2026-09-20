@@ -50,6 +50,7 @@ import { QrCode, downloadNodeAsPng, downloadQrPng } from '@/components/ui/QrCode
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { usePermission } from '@/hooks/usePermission';
 import type { CreateInvitationRequest, UpdateFamilyRequest } from '@/types/family';
 
 const editSchema = z.object({
@@ -89,6 +90,11 @@ export default function FamilyDetailPage({ params }: FamilyDetailPageProps) {
   const { user } = useAuth();
   const { data, isLoading, isError, error } = useFamily(params.id);
   const { data: generations } = useGenerations(params.id);
+  // Re-derive permissions via the shared hook BEFORE any early returns so
+  // the hook order is stable across renders — calling hooks after a
+  // conditional return violates the Rules of Hooks and React throws
+  // "Rendered more hooks than during the previous render".
+  const { isAdmin, canInvite, canEditFamily } = usePermission(params.id);
   const [tab, setTab] = useState<TabKey>('overview');
   const [editOpen, setEditOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -122,6 +128,9 @@ export default function FamilyDetailPage({ params }: FamilyDetailPageProps) {
 
   const family = data.family;
   const stats = data.stats;
+  const showInviteButton = isAdmin || canInvite;
+  const showHistoryButton = isAdmin;
+  const showEditFamilyButton = (data.role === 'ADMIN' || data.role === 'admin') && canEditFamily;
 
   return (
     <div className="space-y-6">
@@ -177,6 +186,7 @@ export default function FamilyDetailPage({ params }: FamilyDetailPageProps) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            {showInviteButton && (
             <Button
               variant="outline"
               size="sm"
@@ -185,12 +195,15 @@ export default function FamilyDetailPage({ params }: FamilyDetailPageProps) {
             >
               Mời thành viên
             </Button>
+            )}
+            {showHistoryButton && (
             <Link href={`/families/${params.id}/invitations`}>
               <Button variant="ghost" size="sm" leftIcon={<Mail className="h-4 w-4" />}>
                 Lịch sử lời mời
               </Button>
             </Link>
-            {(data.role === 'ADMIN' || data.role === 'admin') && (
+            )}
+            {showEditFamilyButton && (
               <Button
                 variant="outline"
                 size="sm"

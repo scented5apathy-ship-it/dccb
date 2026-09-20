@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
 import { usePublicRecipes, useRecipes } from '@/hooks/useRecipes';
+import { usePermission } from '@/hooks/usePermission';
 import { useFamilies } from '@/hooks/useFamily';
 import type { RecipeWithStats } from '@/types/recipe';
 
@@ -39,6 +40,8 @@ export default function RecipesPage() {
   const { data: families } = useFamilies();
   const firstFamily = families?.[0];
   const familyQuery = useRecipes(firstFamily?.family.id, filters);
+  const { isEditor } = usePermission(firstFamily?.family.id);
+  const canCreateRecipe = isEditor;
 
   // Prefer family recipes if a family is available, otherwise fall back to public.
   const active = firstFamily ? familyQuery : publicQuery;
@@ -57,7 +60,7 @@ export default function RecipesPage() {
               : 'Khám phá các công thức truyền thống được chia sẻ bởi cộng đồng.'}
           </p>
         </div>
-        {firstFamily && (
+        {firstFamily && canCreateRecipe && (
           <Link href="/recipes/new">
             <Button leftIcon={<Plus className="h-4 w-4" />}>Tạo công thức</Button>
           </Link>
@@ -135,7 +138,7 @@ export default function RecipesPage() {
             title="Chưa có công thức nào"
             description="Hãy là người đầu tiên chia sẻ công thức truyền thống của gia đình bạn."
             action={
-              firstFamily ? (
+              firstFamily && canCreateRecipe ? (
                 <Link href="/recipes/new">
                   <Button leftIcon={<Plus className="h-4 w-4" />}>Tạo công thức</Button>
                 </Link>

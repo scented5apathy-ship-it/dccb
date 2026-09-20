@@ -27,6 +27,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useMember, useDeleteMember, useUpdateMember } from '@/hooks/useMembers';
+import { usePermission } from '@/hooks/usePermission';
 import { showToast } from '@/components/ui/Toast';
 import { formatDate } from '@/lib/utils';
 import type { UpdateMemberRequest, Gender } from '@/types/family';
@@ -39,6 +40,12 @@ export default function MemberDetailPage({ params }: PageProps) {
   const router = useRouter();
   const { data, isLoading, isError, error } = useMember(params.id);
   const deleteMutation = useDeleteMember();
+  // We need the family scope for the permission hook, but the hook needs
+  // to be called before any conditional `return` to keep the rules of
+  // hooks. The hook itself is resilient to `undefined` familyId.
+  const { isEditor, canEditFamily } = usePermission(data?.member?.familyId);
+  const canEditThisMember = isEditor;
+  const canDeleteThisMember = canEditFamily;
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -184,6 +191,7 @@ export default function MemberDetailPage({ params }: PageProps) {
                 Cây gia phả
               </Button>
             </Link>
+            {canEditThisMember && (
             <Button
               variant="outline"
               leftIcon={<Edit className="h-4 w-4" />}
@@ -191,6 +199,8 @@ export default function MemberDetailPage({ params }: PageProps) {
             >
               Chỉnh sửa
             </Button>
+            )}
+            {canDeleteThisMember && (
             <Button
               variant="ghost"
               leftIcon={<Trash2 className="h-4 w-4" />}
@@ -199,6 +209,7 @@ export default function MemberDetailPage({ params }: PageProps) {
             >
               Xoá
             </Button>
+            )}
           </div>
         </div>
       </Card>

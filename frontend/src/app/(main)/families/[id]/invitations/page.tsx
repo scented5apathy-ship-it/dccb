@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useInvitations, useRevokeInvitation } from '@/hooks/useMembers';
 import { useFamily } from '@/hooks/useFamily';
+import { usePermission } from '@/hooks/usePermission';
 import { showToast } from '@/components/ui/Toast';
 import { formatDate, formatRelativeTime } from '@/lib/utils';
 import type { InvitationDetail, InvitationStatus } from '@/types/family';
@@ -49,6 +50,8 @@ export default function InvitationsPage() {
   const { data: familyData } = useFamily(familyId);
   const { data, isLoading } = useInvitations(familyId);
   const revokeMutation = useRevokeInvitation();
+  const { isAdmin, canInvite } = usePermission(familyId);
+  const canManageInvitations = isAdmin && canInvite;
   const [filter, setFilter] = useState<InvitationStatus | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -139,11 +142,13 @@ export default function InvitationsPage() {
             </p>
           </div>
         </div>
+        {canManageInvitations && (
         <Link href={`/families/${familyId}`}>
           <Button leftIcon={<Send className="h-4 w-4" />}>
             Mời thành viên mới
           </Button>
         </Link>
+        )}
       </div>
 
       {/* Stats + filters */}
@@ -203,11 +208,13 @@ export default function InvitationsPage() {
             title="Chưa có lời mời nào"
             description="Khi bạn mời thành viên, mọi lời mời (kể cả đã hết hạn) sẽ xuất hiện ở đây."
             action={
+              canManageInvitations ? (
               <Link href={`/families/${familyId}`}>
                 <Button leftIcon={<Send className="h-4 w-4" />}>
                   Tạo lời mời đầu tiên
                 </Button>
               </Link>
+              ) : undefined
             }
           />
         </Card>
@@ -226,6 +233,7 @@ export default function InvitationsPage() {
               key={inv.id}
               invite={inv}
               copied={copiedId === inv.id}
+              canRevoke={canManageInvitations}
               onCopy={(text) => handleCopy(text, inv.id)}
               onRevoke={() => setRevokeTarget(inv)}
               onQr={() => setQrInvite(inv)}
@@ -464,12 +472,13 @@ function QrPopup({ invite, onClose, familyName, inviterName }: QrPopupProps) {
 interface InvitationRowProps {
   invite: InvitationDetail;
   copied: boolean;
+  canRevoke?: boolean;
   onCopy: (text: string) => void;
   onRevoke: () => void;
   onQr: () => void;
 }
 
-function InvitationRow({ invite, copied, onCopy, onRevoke, onQr }: InvitationRowProps) {
+function InvitationRow({ invite, copied, canRevoke = true, onCopy, onRevoke, onQr }: InvitationRowProps) {
   const meta = STATUS_META[invite.status];
   const Icon = meta.icon;
   const expires = invite.expiresAt ? new Date(invite.expiresAt) : null;
@@ -546,7 +555,7 @@ function InvitationRow({ invite, copied, onCopy, onRevoke, onQr }: InvitationRow
               QR
             </Button>
           )}
-          {invite.status === 'PENDING' && (
+          {invite.status === 'PENDING' && canRevoke && (
             <Button
               variant="danger"
               size="sm"

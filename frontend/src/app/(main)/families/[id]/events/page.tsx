@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { EventCard } from '@/components/event/EventCard';
 import { CreateEventForm } from '@/components/event/CreateEventForm';
+import { usePermission } from '@/hooks/usePermission';
 import { useEvents } from '@/hooks/useEvents';
 import type { ListEventsParams } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -46,6 +47,8 @@ export default function FamilyEventsPage({ params }: PageProps) {
 
   const eventsQuery = useEvents(familyId, filters);
   const entries = eventsQuery.data?.events ?? [];
+  const { isEditor } = usePermission(familyId);
+  const canCreateEvent = isEditor;
 
   return (
     <div className="space-y-6">
@@ -59,9 +62,11 @@ export default function FamilyEventsPage({ params }: PageProps) {
             Tất cả sự kiện thuộc về gia đình này.
           </p>
         </div>
+        {canCreateEvent && (
         <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setCreateOpen(true)}>
           Tạo sự kiện
         </Button>
+        )}
       </header>
 
       <Card padding="sm">
@@ -133,9 +138,11 @@ export default function FamilyEventsPage({ params }: PageProps) {
           }
           description="Tạo sự kiện đầu tiên để bắt đầu lên kế hoạch."
           action={
+            canCreateEvent ? (
             <Button onClick={() => setCreateOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
               Tạo sự kiện
             </Button>
+            ) : undefined
           }
         />
       )}

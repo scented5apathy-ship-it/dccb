@@ -4,12 +4,17 @@ import Link from 'next/link';
 import { ArrowLeft, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { FamilyTree } from '@/components/family/FamilyTree';
+import { usePermission } from '@/hooks/usePermission';
 
 interface FamilyTreePageProps {
   params: { id: string };
 }
 
 export default function FamilyTreePage({ params }: FamilyTreePageProps) {
+  // Managing members requires editor or admin role. Viewers see the tree
+  // but no entry point to the management UI.
+  const { isEditor } = usePermission(params.id);
+  const canManageMembers = isEditor;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -27,11 +32,13 @@ export default function FamilyTreePage({ params }: FamilyTreePageProps) {
             Trực quan hoá mối quan hệ giữa các thành viên trong dòng họ.
           </p>
         </div>
+        {canManageMembers && (
         <Link href={`/families/${params.id}/members`}>
           <Button variant="outline" leftIcon={<Users className="h-4 w-4" />}>
             Quản lý thành viên
           </Button>
         </Link>
+        )}
       </div>
 
       <FamilyTree familyId={params.id} />

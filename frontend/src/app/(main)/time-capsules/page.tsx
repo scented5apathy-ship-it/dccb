@@ -18,6 +18,7 @@ import {
   useTimeCapsules,
   useDeleteTimeCapsule,
 } from '@/hooks/useTimeCapsules';
+import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/hooks/useAuth';
 import type { TimeCapsuleEntry } from '@/types/time-capsule';
 import type { ListTimeCapsulesParams } from '@/lib/api-client';
@@ -60,6 +61,11 @@ export default function TimeCapsulesPage() {
   });
 
   const deleteMutation = useDeleteTimeCapsule();
+  const { isEditor, isAdmin } = usePermission(familyId);
+  const canCreateCapsule = isEditor;
+  // Deleting a time capsule is admin-only — it's an irreversible action
+  // and the sealed content may hold sentimental value.
+  const canDeleteCapsule = isAdmin;
 
   // Counts come from the unfiltered list so every chip shows the right number.
   const allEntries = useMemo(
@@ -110,12 +116,14 @@ export default function TimeCapsulesPage() {
             </select>
           )}
           {familyId ? (
+            canCreateCapsule ? (
             <Button
               leftIcon={<Plus className="h-4 w-4" />}
               onClick={() => setCreateOpen(true)}
             >
               Tạo hộp thời gian
             </Button>
+            ) : null
           ) : (
             <Link href="/families/new">
               <Button leftIcon={<Home className="h-4 w-4" />} variant="outline">
@@ -197,9 +205,11 @@ export default function TimeCapsulesPage() {
           title="Chưa có hộp thời gian nào"
           description="Tạo hộp đầu tiên và gửi gắm lời nhắn cho thế hệ tương lai."
           action={
+            canCreateCapsule ? (
             <Button onClick={() => setCreateOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
               Tạo hộp thời gian
             </Button>
+            ) : undefined
           }
         />
       )}
@@ -241,9 +251,13 @@ export default function TimeCapsulesPage() {
         entry={selected}
         familyId={familyId}
         onClose={() => setSelected(null)}
-        onDelete={async (id) => {
-          await deleteMutation.mutateAsync({ id, familyId });
-        }}
+        onDelete={
+          canDeleteCapsule
+            ? async (id) => {
+                await deleteMutation.mutateAsync({ id, familyId });
+              }
+            : undefined
+        }
       />
     </div>
   );

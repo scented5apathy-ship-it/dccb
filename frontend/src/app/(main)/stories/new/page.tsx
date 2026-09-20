@@ -10,6 +10,7 @@ import { showToast } from '@/components/ui/Toast';
 import { StoryForm } from '@/components/story/StoryForm';
 import { useFamilies } from '@/hooks/useFamily';
 import { useFamilyMembers } from '@/hooks/useFamily';
+import { usePermission } from '@/hooks/usePermission';
 import { useCreateStory } from '@/hooks/useStories';
 import type { CreateStoryRequest } from '@/types/story';
 
@@ -52,6 +53,9 @@ function NewStoryView() {
   }, [membersResp]);
 
   const createStory = useCreateStory();
+  // Editors and admins can post stories; viewers see a friendly notice.
+  const { isEditor, isReady } = usePermission(familyId);
+  const canCreate = isEditor;
 
   const onSubmit = async (payload: CreateStoryRequest) => {
     if (!familyId) {
@@ -123,7 +127,21 @@ function NewStoryView() {
         </Card>
       )}
 
-      {familyId && (
+      {familyId && isReady && !canCreate && (
+        <Card padding="lg">
+          <p className="text-sm text-neutral-600">
+            Bạn cần quyền Biên tập viên (EDITOR) hoặc Quản trị viên (ADMIN) để viết câu chuyện trong gia đình này.
+          </p>
+          <Link
+            href="/stories"
+            className="mt-3 inline-block text-sm text-primary-600 hover:text-primary-800"
+          >
+            ← Quay lại danh sách câu chuyện
+          </Link>
+        </Card>
+      )}
+
+      {familyId && canCreate && (
         <StoryForm
           familyId={familyId}
           members={members}

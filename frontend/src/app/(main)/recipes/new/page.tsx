@@ -10,6 +10,7 @@ import { showToast } from '@/components/ui/Toast';
 import { RecipeForm } from '@/components/recipe/RecipeForm';
 import { useFamilies } from '@/hooks/useFamily';
 import { useFamilyMembers } from '@/hooks/useFamily';
+import { usePermission } from '@/hooks/usePermission';
 import { useCreateRecipe } from '@/hooks/useRecipes';
 import type { CreateRecipeRequest } from '@/types/recipe';
 
@@ -60,6 +61,10 @@ function NewRecipeView() {
   }, [membersResp]);
 
   const createRecipe = useCreateRecipe();
+  // Only editors and admins can create recipes. Viewers/Members see a
+  // friendly explanation instead of the form.
+  const { isEditor, isReady } = usePermission(selectedFamilyId);
+  const canCreate = isEditor;
 
   const onSubmit = async (payload: CreateRecipeRequest) => {
     if (!selectedFamilyId) {
@@ -143,7 +148,21 @@ function NewRecipeView() {
         </Card>
       )}
 
-      {selectedFamilyId && (
+      {selectedFamilyId && isReady && !canCreate && (
+        <Card padding="lg">
+          <p className="text-sm text-neutral-600">
+            Bạn cần quyền Biên tập viên (EDITOR) hoặc Quản trị viên (ADMIN) để thêm công thức vào gia đình này.
+          </p>
+          <Link
+            href="/recipes"
+            className="mt-3 inline-block text-sm text-primary-600 hover:text-primary-800"
+          >
+            ← Quay lại danh sách công thức
+          </Link>
+        </Card>
+      )}
+
+      {selectedFamilyId && canCreate && (
         <RecipeForm
           familyId={selectedFamilyId}
           members={members}

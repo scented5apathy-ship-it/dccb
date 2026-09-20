@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { useFamilies } from '@/hooks/useFamily';
+import { usePermission } from '@/hooks/usePermission';
 import { useStories, useStoryTags } from '@/hooks/useStories';
 
 export default function StoriesPage() {
@@ -32,6 +33,8 @@ export default function StoriesPage() {
 
   const { data: storiesResp, isLoading } = useStories(firstFamily?.family.id, filters);
   const { data: tags } = useStoryTags();
+  const { isEditor } = usePermission(firstFamily?.family.id);
+  const canCreateStory = isEditor;
 
   const items = storiesResp?.stories ?? [];
 
@@ -48,7 +51,7 @@ export default function StoriesPage() {
               : 'Các câu chuyện, kỷ niệm và truyền thống được lưu giữ.'}
           </p>
         </div>
-        {firstFamily && (
+        {firstFamily && canCreateStory && (
           <Link href={`/stories/new?familyId=${firstFamily.family.id}`}>
             <Button leftIcon={<Plus className="h-4 w-4" />}>Viết câu chuyện</Button>
           </Link>
@@ -107,7 +110,7 @@ export default function StoriesPage() {
             title="Chưa có câu chuyện nào"
             description="Hãy chia sẻ những kỷ niệm đáng nhớ của gia đình bạn."
             action={
-              firstFamily ? (
+              firstFamily && canCreateStory ? (
                 <Link href={`/stories/new?familyId=${firstFamily.family.id}`}>
                   <Button leftIcon={<Plus className="h-4 w-4" />}>Viết câu chuyện</Button>
                 </Link>

@@ -23,6 +23,7 @@ import {
   useEvent,
 } from '@/hooks/useEvents';
 import { useFamilyMembers } from '@/hooks/useFamily';
+import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateTime, formatDate } from '@/lib/utils';
 import type { EventType } from '@/types/event';
@@ -66,6 +67,12 @@ export default function EventDetailPage({ params }: PageProps) {
   const familyId = event?.familyId;
   const deleteMutation = useDeleteEvent();
   const membersQuery = useFamilyMembers(familyId);
+  // usePermission must be called BEFORE any early returns so the hook order
+  // stays stable across renders — otherwise React throws
+  // "Rendered more hooks than during the previous render". familyId may be
+  // undefined on the first render while the event is loading; the hook
+  // itself handles that (it returns isAdmin=false).
+  const { isAdmin } = usePermission(familyId);
 
   const handleDelete = async () => {
     try {
@@ -107,6 +114,7 @@ export default function EventDetailPage({ params }: PageProps) {
   const isCreator = user?.id && event.creatorId === user.id;
   const start = new Date(event.eventDate);
   const isPast = start.getTime() < Date.now();
+  const canDeleteEvent = Boolean(isCreator) || isAdmin;
 
   return (
     <div className="space-y-6">
@@ -147,7 +155,7 @@ export default function EventDetailPage({ params }: PageProps) {
                 Tạo bởi {eventQuery.data?.creator?.fullName ?? '—'}
               </p>
             </div>
-            {isCreator && (
+            {canDeleteEvent && (
               <Button
                 variant="outline"
                 leftIcon={<Trash2 className="h-4 w-4" />}

@@ -15,6 +15,7 @@ import {
   useTimeCapsules,
   useDeleteTimeCapsule,
 } from '@/hooks/useTimeCapsules';
+import { usePermission } from '@/hooks/usePermission';
 import type { TimeCapsuleEntry } from '@/types/time-capsule';
 import type { ListTimeCapsulesParams } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -44,6 +45,11 @@ export default function FamilyTimeCapsulesPage({ params }: PageProps) {
   const allCapsulesQuery = useTimeCapsules(familyId);
   const capsulesQuery = useTimeCapsules(familyId, { status: statusFilter });
   const deleteMutation = useDeleteTimeCapsule();
+  const { isEditor, isAdmin } = usePermission(familyId);
+  const canCreateCapsule = isEditor;
+  // Deleting a capsule is admin-only — same rationale as the global
+  // /time-capsules page.
+  const canDeleteCapsule = isAdmin;
   const allEntries = useMemo(
     () => allCapsulesQuery.data?.capsules ?? [],
     [allCapsulesQuery.data?.capsules]
@@ -75,12 +81,14 @@ export default function FamilyTimeCapsulesPage({ params }: PageProps) {
             Những lời nhắn được niêm phong cho các thành viên trong gia đình.
           </p>
         </div>
+        {canCreateCapsule && (
         <Button
           leftIcon={<Plus className="h-4 w-4" />}
           onClick={() => setCreateOpen(true)}
         >
           Tạo hộp thời gian
         </Button>
+        )}
       </header>
 
       <Card padding="sm">
@@ -139,9 +147,11 @@ export default function FamilyTimeCapsulesPage({ params }: PageProps) {
           title="Chưa có hộp thời gian nào"
           description="Bắt đầu lưu giữ những lời nhắn cho tương lai."
           action={
+            canCreateCapsule ? (
             <Button onClick={() => setCreateOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
               Tạo hộp thời gian
             </Button>
+            ) : undefined
           }
         />
       )}
@@ -177,9 +187,13 @@ export default function FamilyTimeCapsulesPage({ params }: PageProps) {
         entry={selected}
         familyId={familyId}
         onClose={() => setSelected(null)}
-        onDelete={async (id) => {
-          await deleteMutation.mutateAsync({ id, familyId });
-        }}
+        onDelete={
+          canDeleteCapsule
+            ? async (id) => {
+                await deleteMutation.mutateAsync({ id, familyId });
+              }
+            : undefined
+        }
       />
     </div>
   );

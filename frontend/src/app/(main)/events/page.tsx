@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { EventCard } from '@/components/event/EventCard';
 import { CreateEventForm } from '@/components/event/CreateEventForm';
 import { useEvents } from '@/hooks/useEvents';
+import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import type { ListEventsParams } from '@/lib/api-client';
@@ -62,6 +63,8 @@ export default function EventsPage() {
 
   const eventsQuery = useEvents(familyId, filters);
   const entries = eventsQuery.data?.events ?? [];
+  const { isEditor } = usePermission(familyId);
+  const canCreateEvent = isEditor;
 
   return (
     <div className="space-y-6">
@@ -91,12 +94,14 @@ export default function EventsPage() {
             </select>
           )}
           {familyId ? (
+            canCreateEvent ? (
             <Button
               leftIcon={<Plus className="h-4 w-4" />}
               onClick={() => setCreateOpen(true)}
             >
               Tạo sự kiện
             </Button>
+            ) : null
           ) : (
             <Link href="/families/new">
               <Button leftIcon={<Home className="h-4 w-4" />} variant="outline">
@@ -191,9 +196,11 @@ export default function EventsPage() {
           }
           description="Tạo sự kiện đầu tiên để bắt đầu lên kế hoạch."
           action={
+            canCreateEvent ? (
             <Button onClick={() => setCreateOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
               Tạo sự kiện
             </Button>
+            ) : undefined
           }
         />
       )}
