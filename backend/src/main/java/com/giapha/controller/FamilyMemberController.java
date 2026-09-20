@@ -11,6 +11,7 @@ import com.giapha.model.dto.member.UpdateMemberRequest;
 import com.giapha.model.dto.member.UpdateMemberRoleRequest;
 import com.giapha.security.CustomUserDetails;
 import com.giapha.service.FamilyMemberService;
+import com.giapha.util.AuthorizationHelper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -42,6 +43,7 @@ import java.util.UUID;
 public class FamilyMemberController {
 
     private final FamilyMemberService memberService;
+    private final AuthorizationHelper authHelper;
 
     @GetMapping("/families/{familyId}/members")
     public ResponseEntity<Map<String, Object>> listMembers(
@@ -50,8 +52,9 @@ public class FamilyMemberController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "aliveOnly", required = false) Boolean aliveOnly,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         List<MemberWithRelationships> data =
-            memberService.listMembers(familyId, generationId, search, aliveOnly, currentUser.getUser());
+                memberService.listMembers(familyId, generationId, search, aliveOnly, currentUser.getUser());
         return ResponseEntity.ok(Map.of("members", data));
     }
 
@@ -60,6 +63,7 @@ public class FamilyMemberController {
             @PathVariable UUID familyId,
             @Valid @RequestBody CreateMemberRequest req,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         MemberDto member = memberService.addMember(familyId, req, currentUser.getUser());
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("member", member));
     }
@@ -69,6 +73,7 @@ public class FamilyMemberController {
             @PathVariable UUID familyId,
             @Valid @RequestBody CreateInvitationRequest req,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         InvitationResponse inv = memberService.createInvitation(familyId, req, currentUser.getUser());
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("invitation", inv));
     }
@@ -77,8 +82,9 @@ public class FamilyMemberController {
     public ResponseEntity<Map<String, Object>> listInvitations(
             @PathVariable UUID familyId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         List<InvitationDetailDto> data =
-            memberService.listInvitations(familyId, currentUser.getUser());
+                memberService.listInvitations(familyId, currentUser.getUser());
         return ResponseEntity.ok(Map.of("invitations", data));
     }
 
@@ -87,13 +93,15 @@ public class FamilyMemberController {
             @PathVariable UUID invitationId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(
-            memberService.revokeInvitation(invitationId, currentUser.getUser()));
+                memberService.revokeInvitation(invitationId, currentUser.getUser()));
     }
 
     @GetMapping("/members/{memberId}")
     public ResponseEntity<MemberWithRelationships> getMember(
             @PathVariable UUID memberId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID familyId = authHelper.familyIdOfMember(memberId);
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         return ResponseEntity.ok(memberService.getMember(memberId, currentUser.getUser()));
     }
 
@@ -102,6 +110,8 @@ public class FamilyMemberController {
             @PathVariable UUID memberId,
             @Valid @RequestBody UpdateMemberRequest req,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID familyId = authHelper.familyIdOfMember(memberId);
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         MemberDto m = memberService.updateMember(memberId, req, currentUser.getUser());
         return ResponseEntity.ok(Map.of("member", m));
     }
@@ -112,8 +122,9 @@ public class FamilyMemberController {
             @PathVariable UUID memberId,
             @Valid @RequestBody UpdateMemberRoleRequest req,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         MemberDto m = memberService.updateMemberRole(familyId, memberId,
-            req.getRole(), currentUser.getUser());
+                req.getRole(), currentUser.getUser());
         return ResponseEntity.ok(Map.of("member", m, "role", req.getRole()));
     }
 
@@ -122,6 +133,7 @@ public class FamilyMemberController {
             @PathVariable UUID familyId,
             @PathVariable UUID memberId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         String role = memberService.resolveMemberRole(familyId, memberId, currentUser.getUser());
         // Collections.singletonMap (not Map.of) because Map.of(K,V) rejects null values
         // via Objects.requireNonNull, and a "pure genealogy entry" member has no
@@ -133,6 +145,8 @@ public class FamilyMemberController {
     public ResponseEntity<MessageResponse> deleteMember(
             @PathVariable UUID memberId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        UUID familyId = authHelper.familyIdOfMember(memberId);
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         return ResponseEntity.ok(memberService.deleteMember(memberId, currentUser.getUser()));
     }
 }

@@ -32,16 +32,18 @@ import java.util.Map;
  *   <li>Fallback when the client-side library fails.</li>
  * </ul>
  *
- * <p>The endpoint is public — the payload (URL) is non-secret and we want to
- * avoid forcing the user to attach their access token to a simple GET. If a
- * caller only wants to encode a token they've already accepted, they can
- * still do so because the URL itself contains the shareable invite code.</p>
+ * <p>This endpoint requires a valid JWT (same as every other non-auth route)
+ * — callers must be logged in. The payload (URL) is non-secret, but we keep
+ * the auth requirement so QR generation can't be triggered anonymously from
+ * a third-party site.</p>
  */
 @RestController
 @RequestMapping("/qr")
 public class QrController {
 
-    /** Hard cap on width/height (pixels). Larger images get downsized. */
+    /**
+     * Hard cap on width/height (pixels). Larger images get downsized.
+     */
     private static final int MAX_SIZE = 1024;
     private static final int MIN_SIZE = 64;
     private static final int DEFAULT_SIZE = 320;
@@ -58,9 +60,9 @@ public class QrController {
         try {
             QRCodeWriter writer = new QRCodeWriter();
             Map<EncodeHintType, Object> hints = Map.of(
-                EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M,
-                EncodeHintType.MARGIN, 1,
-                EncodeHintType.CHARACTER_SET, "UTF-8"
+                    EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M,
+                    EncodeHintType.MARGIN, 1,
+                    EncodeHintType.CHARACTER_SET, "UTF-8"
             );
             BitMatrix matrix = writer.encode(data, BarcodeFormat.QR_CODE, pixels, pixels, hints);
 

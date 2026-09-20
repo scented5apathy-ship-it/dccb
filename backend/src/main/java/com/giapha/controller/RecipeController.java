@@ -7,6 +7,7 @@ import com.giapha.model.dto.recipe.RecipeDetailDto;
 import com.giapha.model.dto.recipe.UpdateRecipeRequest;
 import com.giapha.security.CustomUserDetails;
 import com.giapha.service.RecipeService;
+import com.giapha.util.AuthorizationHelper;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,9 +32,11 @@ import java.util.UUID;
 public class RecipeController {
 
     private final RecipeService recipeService;
+    private final AuthorizationHelper authHelper;
 
-    public RecipeController(RecipeService recipeService) {
+    public RecipeController(RecipeService recipeService, AuthorizationHelper authHelper) {
         this.recipeService = recipeService;
+        this.authHelper = authHelper;
     }
 
     // A1
@@ -47,6 +50,7 @@ public class RecipeController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         return recipeService.listForFamily(familyId, cuisine, difficulty, search, authorId, page, size, currentUser);
     }
 
@@ -56,6 +60,7 @@ public class RecipeController {
             @PathVariable UUID familyId,
             @Valid @RequestBody CreateRecipeRequest req,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         return recipeService.createRecipe(familyId, req, currentUser);
     }
 

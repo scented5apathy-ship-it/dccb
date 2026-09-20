@@ -5,6 +5,7 @@ import com.giapha.model.dto.generation.CreateGenerationRequest;
 import com.giapha.model.dto.generation.GenerationDto;
 import com.giapha.security.CustomUserDetails;
 import com.giapha.service.GenerationService;
+import com.giapha.util.AuthorizationHelper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class GenerationController {
 
     private final GenerationService generationService;
+    private final AuthorizationHelper authHelper;
 
     // ----- /api/families/{familyId}/generations ----- //
 
@@ -32,6 +34,7 @@ public class GenerationController {
     public ResponseEntity<Map<String, Object>> list(
             @PathVariable UUID familyId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         List<GenerationDto> data = generationService.list(familyId, currentUser.getUser());
         return ResponseEntity.ok(Map.of("generations", data));
     }
@@ -41,6 +44,7 @@ public class GenerationController {
             @PathVariable UUID familyId,
             @Valid @RequestBody CreateGenerationRequest req,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         GenerationDto gen = generationService.create(familyId, req, currentUser.getUser());
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("generation", gen));
     }

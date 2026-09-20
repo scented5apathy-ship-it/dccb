@@ -4,9 +4,12 @@ import com.giapha.model.dto.event.CreateEventRequest;
 import com.giapha.model.dto.event.EventPhotoRequest;
 import com.giapha.model.dto.event.RsvpRequest;
 import com.giapha.model.dto.event.UpdateEventRequest;
+import com.giapha.security.CustomUserDetails;
 import com.giapha.service.EventService;
+import com.giapha.util.AuthorizationHelper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -17,6 +20,7 @@ import java.util.UUID;
 public class EventController {
 
     private final EventService eventService;
+    private final AuthorizationHelper authHelper;
 
     @GetMapping("/families/{familyId}/events")
     public Map<String, Object> list(
@@ -25,14 +29,18 @@ public class EventController {
             @RequestParam(required = false) Boolean upcoming,
             @RequestParam(required = false) Boolean past,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size
+            @RequestParam(required = false) Integer size,
+            @AuthenticationPrincipal CustomUserDetails currentUser
     ) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         return eventService.list(familyId, type, upcoming, past, page, size);
     }
 
     @PostMapping("/families/{familyId}/events")
     public Map<String, Object> create(@PathVariable UUID familyId,
-                                      @Valid @RequestBody CreateEventRequest req) {
+                                      @Valid @RequestBody CreateEventRequest req,
+                                      @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         return eventService.create(familyId, req);
     }
 

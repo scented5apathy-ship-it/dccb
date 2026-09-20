@@ -9,6 +9,7 @@ import com.giapha.model.dto.family.UpdateFamilyRequest;
 import com.giapha.model.entity.User;
 import com.giapha.security.CustomUserDetails;
 import com.giapha.service.FamilyService;
+import com.giapha.util.AuthorizationHelper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -37,6 +38,7 @@ import java.util.UUID;
 public class FamilyController {
 
     private final FamilyService familyService;
+    private final AuthorizationHelper authHelper;
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> createFamily(
@@ -74,6 +76,7 @@ public class FamilyController {
     public ResponseEntity<FamilyDetailDto> getFamily(
             @PathVariable UUID familyId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         return ResponseEntity.ok(familyService.getFamilyDetail(familyId, currentUser.getUser()));
     }
 
@@ -82,6 +85,7 @@ public class FamilyController {
             @PathVariable UUID familyId,
             @Valid @RequestBody UpdateFamilyRequest req,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         FamilyDto family = familyService.updateFamily(familyId, req, currentUser.getUser());
         return ResponseEntity.ok(Map.of("family", family));
     }

@@ -3,6 +3,7 @@ package com.giapha.controller;
 import com.giapha.model.dto.tree.FamilyTreeResponse;
 import com.giapha.security.CustomUserDetails;
 import com.giapha.service.FamilyTreeService;
+import com.giapha.util.AuthorizationHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,11 +22,13 @@ import java.util.UUID;
 public class FamilyTreeController {
 
     private final FamilyTreeService treeService;
+    private final AuthorizationHelper authHelper;
 
     @GetMapping("/families/{familyId}/tree")
     public ResponseEntity<FamilyTreeResponse> getTree(
             @PathVariable UUID familyId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         return ResponseEntity.ok(treeService.buildTree(familyId, currentUser.getUser()));
     }
 }

@@ -6,6 +6,7 @@ import com.giapha.model.dto.relationship.RelationshipDto;
 import com.giapha.model.dto.relationship.UpdateRelationshipRequest;
 import com.giapha.security.CustomUserDetails;
 import com.giapha.service.RelationshipService;
+import com.giapha.util.AuthorizationHelper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class RelationshipController {
 
     private final RelationshipService relationshipService;
+    private final AuthorizationHelper authHelper;
 
     /**
      * List every relationship edge in a family. Mirrors the front-end's
@@ -33,6 +35,7 @@ public class RelationshipController {
     public ResponseEntity<List<com.giapha.model.entity.Relationship>> listByFamily(
             @RequestParam UUID familyId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
+        authHelper.requireFamilyMember(currentUser.getId(), familyId);
         return ResponseEntity.ok(relationshipService.list(familyId, currentUser.getUser()));
     }
 
